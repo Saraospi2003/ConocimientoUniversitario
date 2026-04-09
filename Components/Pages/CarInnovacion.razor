@@ -1,0 +1,108 @@
+﻿@page "/carinnovacion"
+@rendermode InteractiveServer
+@inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
+
+<h3>CRUD Característica Innovación</h3>
+
+<div class="mb-3">
+    <label>ID</label>
+    <input class="form-control" @bind="id" />
+</div>
+<div class="mb-3">
+    <label>Nombre</label>
+    <input class="form-control" @bind="nombre" />
+</div>
+<div class="mb-3">
+    <label>Descripción</label>
+    <input class="form-control" @bind="descripcion" />
+</div>
+<div class="mb-3">
+    <label>Tipo</label>
+    <input class="form-control" @bind="tipo" />
+</div>
+
+<div class="mb-3">
+    <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
+    <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
+    <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(mensaje))
+{
+    <div class="alert alert-info">@mensaje</div>
+}
+
+<h4>Listado de características de innovación</h4>
+<table class="table table-bordered">
+    <thead>
+        <tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Tipo</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+        @foreach (var item in carInnovaciones)
+        {
+            var idEliminar = item["id"]?.ToString() ?? "";
+            <tr>
+                <td>@item["id"]</td>
+                <td>@item["nombre"]</td>
+                <td>@item["descripcion"]</td>
+                <td>@item["tipo"]</td>
+                <td>
+                    <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
+                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Dictionary<string, object?>> carInnovaciones = new();
+    private string id = "", nombre = "", descripcion = "", tipo = "", mensaje = "";
+
+    protected override async Task OnInitializedAsync() => await CargarDatos();
+    private async Task CargarDatos() => carInnovaciones = await Api.ListarAsync("car_innovacion");
+
+    private async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre) ||
+            string.IsNullOrWhiteSpace(descripcion) || string.IsNullOrWhiteSpace(tipo))
+        {
+            mensaje = "Completa todos los campos."; StateHasChanged(); return;
+        }
+        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre }, { "descripcion", descripcion }, { "tipo", tipo } };
+        var resultado = await Api.CrearAsync("car_innovacion", datos);
+        mensaje = resultado.mensaje;
+        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+    }
+
+    private async Task Actualizar()
+    {
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre) ||
+            string.IsNullOrWhiteSpace(descripcion) || string.IsNullOrWhiteSpace(tipo))
+        {
+            mensaje = "Completa todos los campos."; StateHasChanged(); return;
+        }
+        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre }, { "descripcion", descripcion }, { "tipo", tipo } };
+        var resultado = await Api.ActualizarAsync("car_innovacion", "id", id, datos);
+        mensaje = resultado.mensaje;
+        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+    }
+
+    private async Task Eliminar(string idEliminar)
+    {
+        var resultado = await Api.EliminarAsync("car_innovacion", "id", idEliminar);
+        mensaje = resultado.mensaje;
+        await CargarDatos();
+    }
+
+    private void Seleccionar(Dictionary<string, object?> item)
+    {
+        id = item["id"]?.ToString() ?? "";
+        nombre = item["nombre"]?.ToString() ?? "";
+        descripcion = item["descripcion"]?.ToString() ?? "";
+        tipo = item["tipo"]?.ToString() ?? "";
+        mensaje = "Registro cargado para edición.";
+    }
+
+    private void Limpiar() { id = ""; nombre = ""; descripcion = ""; tipo = ""; mensaje = ""; }
+}
