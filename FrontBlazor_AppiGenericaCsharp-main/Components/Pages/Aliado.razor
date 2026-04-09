@@ -1,0 +1,179 @@
+﻿@page "/aliado"
+@rendermode Microsoft.AspNetCore.Components.Web.RenderMode.InteractiveServer
+@inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
+
+<h3>CRUD Aliado</h3>
+
+<div class="mb-3">
+    <label>NIT</label>
+    <input class="form-control" @bind="nit" />
+</div>
+<div class="mb-3">
+    <label>Razón Social</label>
+    <input class="form-control" @bind="razonSocial" />
+</div>
+<div class="mb-3">
+    <label>Nombre Contacto</label>
+    <input class="form-control" @bind="nombreContacto" />
+</div>
+<div class="mb-3">
+    <label>Correo</label>
+    <input class="form-control" @bind="correo" />
+</div>
+<div class="mb-3">
+    <label>Teléfono</label>
+    <input class="form-control" @bind="telefono" />
+</div>
+<div class="mb-3">
+    <label>Ciudad</label>
+    <input class="form-control" @bind="ciudad" />
+</div>
+
+<div class="mb-3">
+    <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
+    <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
+    <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(mensaje))
+{
+    <div class="alert alert-info">@mensaje</div>
+}
+
+<h4>Listado de aliados</h4>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>NIT</th>
+            <th>Razón Social</th>
+            <th>Nombre Contacto</th>
+            <th>Correo</th>
+            <th>Teléfono</th>
+            <th>Ciudad</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in aliados)
+        {
+            var nitEliminar = item["nit"]?.ToString() ?? "";
+            <tr>
+                <td>@item["nit"]</td>
+                <td>@item["razonSocial"]</td>
+                <td>@item["nombreContacto"]</td>
+                <td>@item["correo"]</td>
+                <td>@item["telefono"]</td>
+                <td>@item["ciudad"]</td>
+                <td>
+                    <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
+                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(nitEliminar)">Eliminar</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Dictionary<string, object?>> aliados = new();
+
+    private string nit = "";
+    private string razonSocial = "";
+    private string nombreContacto = "";
+    private string correo = "";
+    private string telefono = "";
+    private string ciudad = "";
+    private string mensaje = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        aliados = await Api.ListarAsync("Aliado");
+    }
+
+    private async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(nit) ||
+            string.IsNullOrWhiteSpace(razonSocial) ||
+            string.IsNullOrWhiteSpace(nombreContacto) ||
+            string.IsNullOrWhiteSpace(correo) ||
+            string.IsNullOrWhiteSpace(telefono) ||
+            string.IsNullOrWhiteSpace(ciudad))
+        {
+            mensaje = "Completa todos los campos.";
+            return;
+        }
+
+        var datos = new Dictionary<string, object?>
+        {
+            { "nit", nit },
+            { "razonSocial", razonSocial },
+            { "nombreContacto", nombreContacto },
+            { "correo", correo },
+            { "telefono", telefono },
+            { "ciudad", ciudad }
+        };
+
+        var resultado = await Api.CrearAsync("Aliado", datos);
+        mensaje = resultado.mensaje;
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
+    }
+
+    private async Task Actualizar()
+    {
+        var datos = new Dictionary<string, object?>
+        {
+            { "nit", nit },
+            { "razonSocial", razonSocial },
+            { "nombreContacto", nombreContacto },
+            { "correo", correo },
+            { "telefono", telefono },
+            { "ciudad", ciudad }
+        };
+
+        var resultado = await Api.ActualizarAsync("Aliado", "nit", nit, datos);
+        mensaje = resultado.mensaje;
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
+    }
+
+    private async Task Eliminar(string nitEliminar)
+    {
+        var resultado = await Api.EliminarAsync("Aliado", "nit", nitEliminar);
+        mensaje = resultado.mensaje;
+        await CargarDatos();
+    }
+
+    private void Seleccionar(Dictionary<string, object?> item)
+    {
+        nit = item["nit"]?.ToString() ?? "";
+        razonSocial = item["razonSocial"]?.ToString() ?? "";
+        nombreContacto = item["nombreContacto"]?.ToString() ?? "";
+        correo = item["correo"]?.ToString() ?? "";
+        telefono = item["telefono"]?.ToString() ?? "";
+        ciudad = item["ciudad"]?.ToString() ?? "";
+    }
+
+    private void Limpiar()
+    {
+        nit = "";
+        razonSocial = "";
+        nombreContacto = "";
+        correo = "";
+        telefono = "";
+        ciudad = "";
+        mensaje = "";
+    }
+}
