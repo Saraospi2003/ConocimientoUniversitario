@@ -1,0 +1,100 @@
+﻿@page "/Pasantias"
+@rendermode InteractiveServer
+@inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
+
+<h3>CRUD Pasantias</h3>
+
+<div class="mb-3">
+    <label>ID</label>
+    <input class="form-control" @bind="id" />
+</div>
+<div class="mb-3">
+    <label>Nombre</label>
+    <input class="form-control" @bind="nombre" />
+</div>
+<div class="mb-3">
+    <label>Descripción</label>
+    <input class="form-control" @bind="descripcion" />
+</div>
+
+<div class="mb-3">
+    <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
+    <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
+    <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(mensaje))
+{
+    <div class="alert alert-info">@mensaje</div>
+}
+
+<h4>Listado de Pasantias</h4>
+<table class="table table-bordered">
+    <thead>
+        <tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Pasantias)
+        {
+            var idEliminar = item["id"]?.ToString() ?? "";
+            <tr>
+                <td>@item["id"]</td>
+                <td>@item["nombre"]</td>
+                <td>@item["descripcion"]</td>
+                <td>
+                    <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
+                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Dictionary<string, object?>> Pasantias = new();
+    private string id = "", nombre = "", descripcion = "", mensaje = "";
+
+    protected override async Task OnInitializedAsync() => await CargarDatos();
+    private async Task CargarDatos() => Pasantias = await Api.ListarAsync("Pasantias");
+
+    private async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(descripcion))
+        {
+            mensaje = "Completa todos los campos."; StateHasChanged(); return;
+        }
+        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre }, { "descripcion", descripcion } };
+        var resultado = await Api.CrearAsync("Pasantias", datos);
+        mensaje = resultado.mensaje;
+        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+    }
+
+    private async Task Actualizar()
+    {
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(descripcion))
+        {
+            mensaje = "Completa todos los campos."; StateHasChanged(); return;
+        }
+        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre }, { "descripcion", descripcion } };
+        var resultado = await Api.ActualizarAsync("Pasantias", "id", id, datos);
+        mensaje = resultado.mensaje;
+        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+    }
+
+    private async Task Eliminar(string idEliminar)
+    {
+        var resultado = await Api.EliminarAsync("Pasantias", "id", idEliminar);
+        mensaje = resultado.mensaje;
+        await CargarDatos();
+    }
+
+    private void Seleccionar(Dictionary<string, object?> item)
+    {
+        id = item["id"]?.ToString() ?? "";
+        nombre = item["nombre"]?.ToString() ?? "";
+        descripcion = item["descripcion"]?.ToString() ?? "";
+        mensaje = "Registro cargado para edición.";
+    }
+
+    private void Limpiar() { id = ""; nombre = ""; descripcion = ""; mensaje = ""; }
+}
