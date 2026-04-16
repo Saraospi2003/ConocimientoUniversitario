@@ -1,20 +1,29 @@
-﻿@page "/RegistroCalificado"
+﻿@page "/registrocalificado"
 @rendermode InteractiveServer
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD RegistroCalificado</h3>
+<h3>CRUD Registro Calificado</h3>
+
+<div class="mb-3"><label>Código</label><input class="form-control" @bind="codigo" /></div>
+<div class="mb-3"><label>Cant. créditos</label><input class="form-control" @bind="cantCred" /></div>
+<div class="mb-3"><label>Hora acompañamiento</label><input class="form-control" @bind="horaAcom" /></div>
+<div class="mb-3"><label>Hora independiente</label><input class="form-control" @bind="horaInd" /></div>
+<div class="mb-3"><label>Metodología</label><input class="form-control" @bind="metodologia" /></div>
+<div class="mb-3"><label>Fecha inicio</label><input type="date" class="form-control" @bind="fechaInicio" /></div>
+<div class="mb-3"><label>Fecha fin</label><input type="date" class="form-control" @bind="fechaFin" /></div>
+<div class="mb-3"><label>Duración años</label><input class="form-control" @bind="duracionAnios" /></div>
+<div class="mb-3"><label>Duración semestres</label><input class="form-control" @bind="duracionSemes" /></div>
+<div class="mb-3"><label>Tipo titulación</label><input class="form-control" @bind="tipoTitulacion" /></div>
 
 <div class="mb-3">
-    <label>ID</label>
-    <input class="form-control" @bind="id" />
-</div>
-<div class="mb-3">
-    <label>Nombre</label>
-    <input class="form-control" @bind="nombre" />
-</div>
-<div class="mb-3">
-    <label>Descripción</label>
-    <input class="form-control" @bind="descripcion" />
+    <label>Programa</label>
+    <select class="form-control" @bind="programa">
+        <option value="">Seleccione un programa</option>
+        @foreach (var pro in programasLista)
+        {
+            <option value="@pro["id"]">@pro["nombre"]</option>
+        }
+    </select>
 </div>
 
 <div class="mb-3">
@@ -28,19 +37,19 @@
     <div class="alert alert-info">@mensaje</div>
 }
 
-<h4>Listado de RegistroCalificados</h4>
+<h4>Listado de registros calificados</h4>
 <table class="table table-bordered">
     <thead>
-        <tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr>
+        <tr><th>Código</th><th>Metodología</th><th>Programa</th><th>Acciones</th></tr>
     </thead>
     <tbody>
-        @foreach (var item in RegistroCalificados)
+        @foreach (var item in registros)
         {
-            var idEliminar = item["id"]?.ToString() ?? "";
+            var idEliminar = item["codigo"]?.ToString() ?? "";
             <tr>
-                <td>@item["id"]</td>
-                <td>@item["nombre"]</td>
-                <td>@item["descripcion"]</td>
+                <td>@item["codigo"]</td>
+                <td>@item["metodologia"]</td>
+                <td>@item["programa"]</td>
                 <td>
                     <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
                     <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
@@ -51,19 +60,33 @@
 </table>
 
 @code {
-    private List<Dictionary<string, object?>> RegistroCalificados = new();
-    private string id = "", nombre = "", descripcion = "", mensaje = "";
+    private List<Dictionary<string, object?>> registros = new();
+    private List<Dictionary<string, object?>> programasLista = new();
 
-    protected override async Task OnInitializedAsync() => await CargarDatos();
-    private async Task CargarDatos() => RegistroCalificados = await Api.ListarAsync("RegistroCalificado");
+    private string codigo = "", cantCred = "", horaAcom = "", horaInd = "", metodologia = "",
+                   duracionAnios = "", duracionSemes = "", tipoTitulacion = "", programa = "", mensaje = "";
+    private DateTime? fechaInicio;
+    private DateTime? fechaFin;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+        await CargarProgramas();
+    }
+
+    private async Task CargarDatos() => registros = await Api.ListarAsync("RegistroCalificado");
+    private async Task CargarProgramas() => programasLista = await Api.ListarAsync("Programa");
 
     private async Task Guardar()
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(descripcion))
+        var datos = new Dictionary<string, object?>
         {
-            mensaje = "Completa todos los campos."; StateHasChanged(); return;
-        }
-        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre }, { "descripcion", descripcion } };
+            { "codigo", codigo }, { "cantCred", cantCred }, { "horaAcom", horaAcom }, { "horaInd", horaInd },
+            { "metodologia", metodologia }, { "fechaInicio", fechaInicio?.ToString("yyyy-MM-dd") },
+            { "fechaFin", fechaFin?.ToString("yyyy-MM-dd") }, { "duracionAnios", duracionAnios },
+            { "duracionSemes", duracionSemes }, { "tipoTitulacion", tipoTitulacion }, { "programa", programa }
+        };
+
         var resultado = await Api.CrearAsync("RegistroCalificado", datos);
         mensaje = resultado.mensaje;
         if (resultado.exito) { Limpiar(); await CargarDatos(); }
@@ -71,30 +94,54 @@
 
     private async Task Actualizar()
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(descripcion))
+        var datos = new Dictionary<string, object?>
         {
-            mensaje = "Completa todos los campos."; StateHasChanged(); return;
-        }
-        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre }, { "descripcion", descripcion } };
-        var resultado = await Api.ActualizarAsync("RegistroCalificado", "id", id, datos);
+            { "codigo", codigo }, { "cantCred", cantCred }, { "horaAcom", horaAcom }, { "horaInd", horaInd },
+            { "metodologia", metodologia }, { "fechaInicio", fechaInicio?.ToString("yyyy-MM-dd") },
+            { "fechaFin", fechaFin?.ToString("yyyy-MM-dd") }, { "duracionAnios", duracionAnios },
+            { "duracionSemes", duracionSemes }, { "tipoTitulacion", tipoTitulacion }, { "programa", programa }
+        };
+
+        var resultado = await Api.ActualizarAsync("RegistroCalificado", "codigo", codigo, datos);
         mensaje = resultado.mensaje;
         if (resultado.exito) { Limpiar(); await CargarDatos(); }
     }
 
     private async Task Eliminar(string idEliminar)
     {
-        var resultado = await Api.EliminarAsync("RegistroCalificado", "id", idEliminar);
+        var resultado = await Api.EliminarAsync("RegistroCalificado", "codigo", idEliminar);
         mensaje = resultado.mensaje;
         await CargarDatos();
     }
 
     private void Seleccionar(Dictionary<string, object?> item)
     {
-        id = item["id"]?.ToString() ?? "";
-        nombre = item["nombre"]?.ToString() ?? "";
-        descripcion = item["descripcion"]?.ToString() ?? "";
-        mensaje = "Registro cargado para edición.";
+        codigo = item["codigo"]?.ToString() ?? "";
+        cantCred = item["cantCred"]?.ToString() ?? "";
+        horaAcom = item["horaAcom"]?.ToString() ?? "";
+        horaInd = item["horaInd"]?.ToString() ?? "";
+        metodologia = item["metodologia"]?.ToString() ?? "";
+        duracionAnios = item["duracionAnios"]?.ToString() ?? "";
+        duracionSemes = item["duracionSemes"]?.ToString() ?? "";
+        tipoTitulacion = item["tipoTitulacion"]?.ToString() ?? "";
+        programa = item["programa"]?.ToString() ?? "";
+
+        if (DateTime.TryParse(item["fechaInicio"]?.ToString(), out var fi))
+            fechaInicio = fi;
+        else
+            fechaInicio = null;
+
+        if (DateTime.TryParse(item["fechaFin"]?.ToString(), out var ff))
+            fechaFin = ff;
+        else
+            fechaFin = null;
     }
 
-    private void Limpiar() { id = ""; nombre = ""; descripcion = ""; mensaje = ""; }
+    private void Limpiar()
+    {
+        codigo = cantCred = horaAcom = horaInd = metodologia = "";
+        duracionAnios = duracionSemes = tipoTitulacion = programa = mensaje = "";
+        fechaInicio = null;
+        fechaFin = null;
+    }
 }

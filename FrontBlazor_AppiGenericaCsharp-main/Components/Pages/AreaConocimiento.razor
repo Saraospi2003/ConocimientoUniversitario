@@ -1,20 +1,17 @@
-﻿@page "/Programa_ci"
+    @page "/areaconocimiento"
 @rendermode InteractiveServer
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD Programa_ci</h3>
+<h3>CRUD Área Conocimiento</h3>
 
 <div class="mb-3">
     <label>ID</label>
     <input class="form-control" @bind="id" />
 </div>
+
 <div class="mb-3">
     <label>Nombre</label>
     <input class="form-control" @bind="nombre" />
-</div>
-<div class="mb-3">
-    <label>Descripción</label>
-    <input class="form-control" @bind="descripcion" />
 </div>
 
 <div class="mb-3">
@@ -28,19 +25,22 @@
     <div class="alert alert-info">@mensaje</div>
 }
 
-<h4>Listado de Programa_cis</h4>
+<h4>Listado de áreas de conocimiento</h4>
 <table class="table table-bordered">
     <thead>
-        <tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr>
+        <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Acciones</th>
+        </tr>
     </thead>
     <tbody>
-        @foreach (var item in Programa_cis)
+        @foreach (var item in areas)
         {
             var idEliminar = item["id"]?.ToString() ?? "";
             <tr>
                 <td>@item["id"]</td>
                 <td>@item["nombre"]</td>
-                <td>@item["descripcion"]</td>
                 <td>
                     <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
                     <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
@@ -51,39 +51,67 @@
 </table>
 
 @code {
-    private List<Dictionary<string, object?>> Programa_cis = new();
-    private string id = "", nombre = "", descripcion = "", mensaje = "";
+    private List<Dictionary<string, object?>> areas = new();
+    private string id = "", nombre = "", mensaje = "";
 
     protected override async Task OnInitializedAsync() => await CargarDatos();
-    private async Task CargarDatos() => Programa_cis = await Api.ListarAsync("Programa_ci");
+
+    private async Task CargarDatos()
+        => areas = await Api.ListarAsync("AreaConocimiento");
 
     private async Task Guardar()
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(descripcion))
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre))
         {
-            mensaje = "Completa todos los campos."; StateHasChanged(); return;
+            mensaje = "Completa todos los campos.";
+            StateHasChanged();
+            return;
         }
-        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre }, { "descripcion", descripcion } };
-        var resultado = await Api.CrearAsync("Programa_ci", datos);
+
+        var datos = new Dictionary<string, object?>
+        {
+            { "id", id },
+            { "nombre", nombre }
+        };
+
+        var resultado = await Api.CrearAsync("AreaConocimiento", datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
     }
 
     private async Task Actualizar()
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(descripcion))
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre))
         {
-            mensaje = "Completa todos los campos."; StateHasChanged(); return;
+            mensaje = "Completa todos los campos.";
+            StateHasChanged();
+            return;
         }
-        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre }, { "descripcion", descripcion } };
-        var resultado = await Api.ActualizarAsync("Programa_ci", "id", id, datos);
+
+        var datos = new Dictionary<string, object?>
+        {
+            { "id", id },
+            { "nombre", nombre }
+        };
+
+        var resultado = await Api.ActualizarAsync("AreaConocimiento", "id", id, datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
     }
 
     private async Task Eliminar(string idEliminar)
     {
-        var resultado = await Api.EliminarAsync("Programa_ci", "id", idEliminar);
+        var resultado = await Api.EliminarAsync("AreaConocimiento", "id", idEliminar);
         mensaje = resultado.mensaje;
         await CargarDatos();
     }
@@ -92,9 +120,13 @@
     {
         id = item["id"]?.ToString() ?? "";
         nombre = item["nombre"]?.ToString() ?? "";
-        descripcion = item["descripcion"]?.ToString() ?? "";
         mensaje = "Registro cargado para edición.";
     }
 
-    private void Limpiar() { id = ""; nombre = ""; descripcion = ""; mensaje = ""; }
+    private void Limpiar()
+    {
+        id = "";
+        nombre = "";
+        mensaje = "";
+    }
 }

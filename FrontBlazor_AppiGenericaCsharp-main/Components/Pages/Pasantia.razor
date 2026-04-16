@@ -1,15 +1,14 @@
-﻿@page "/premio"
+﻿@page "/pasantia"
 @rendermode InteractiveServer
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD Premio</h3>
+<h3>CRUD Pasantía</h3>
 
 <div class="mb-3"><label>ID</label><input class="form-control" @bind="id" /></div>
 <div class="mb-3"><label>Nombre</label><input class="form-control" @bind="nombre" /></div>
-<div class="mb-3"><label>Descripción</label><input class="form-control" @bind="descripcion" /></div>
-<div class="mb-3"><label>Fecha</label><input type="date" class="form-control" @bind="fecha" /></div>
-<div class="mb-3"><label>Entidad otorgante</label><input class="form-control" @bind="entidadOtorgante" /></div>
 <div class="mb-3"><label>País</label><input class="form-control" @bind="pais" /></div>
+<div class="mb-3"><label>Empresa</label><input class="form-control" @bind="empresa" /></div>
+<div class="mb-3"><label>Descripción</label><input class="form-control" @bind="descripcion" /></div>
 
 <div class="mb-3">
     <label>Programa</label>
@@ -33,13 +32,13 @@
     <div class="alert alert-info">@mensaje</div>
 }
 
-<h4>Listado de premios</h4>
+<h4>Listado de pasantías</h4>
 <table class="table table-bordered">
     <thead>
         <tr><th>ID</th><th>Nombre</th><th>Programa</th><th>Acciones</th></tr>
     </thead>
     <tbody>
-        @foreach (var item in premios)
+        @foreach (var item in pasantias)
         {
             var idEliminar = item["id"]?.ToString() ?? "";
             <tr>
@@ -56,11 +55,10 @@
 </table>
 
 @code {
-    private List<Dictionary<string, object?>> premios = new();
+    private List<Dictionary<string, object?>> pasantias = new();
     private List<Dictionary<string, object?>> programasLista = new();
 
-    private string id = "", nombre = "", descripcion = "", entidadOtorgante = "", pais = "", programa = "", mensaje = "";
-    private DateTime? fecha;
+    private string id = "", nombre = "", pais = "", empresa = "", descripcion = "", programa = "", mensaje = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -68,19 +66,18 @@
         await CargarProgramas();
     }
 
-    private async Task CargarDatos() => premios = await Api.ListarAsync("Premio");
+    private async Task CargarDatos() => pasantias = await Api.ListarAsync("Pasantia");
     private async Task CargarProgramas() => programasLista = await Api.ListarAsync("Programa");
 
     private async Task Guardar()
     {
         var datos = new Dictionary<string, object?>
         {
-            { "id", id }, { "nombre", nombre }, { "descripcion", descripcion },
-            { "fecha", fecha?.ToString("yyyy-MM-dd") }, { "entidadOtorgante", entidadOtorgante },
-            { "pais", pais }, { "programa", programa }
+            { "id", id }, { "nombre", nombre }, { "pais", pais }, { "empresa", empresa },
+            { "descripcion", descripcion }, { "programa", programa }
         };
 
-        var resultado = await Api.CrearAsync("Premio", datos);
+        var resultado = await Api.CrearAsync("Pasantia", datos);
         mensaje = resultado.mensaje;
         if (resultado.exito) { Limpiar(); await CargarDatos(); }
     }
@@ -89,19 +86,18 @@
     {
         var datos = new Dictionary<string, object?>
         {
-            { "id", id }, { "nombre", nombre }, { "descripcion", descripcion },
-            { "fecha", fecha?.ToString("yyyy-MM-dd") }, { "entidadOtorgante", entidadOtorgante },
-            { "pais", pais }, { "programa", programa }
+            { "id", id }, { "nombre", nombre }, { "pais", pais }, { "empresa", empresa },
+            { "descripcion", descripcion }, { "programa", programa }
         };
 
-        var resultado = await Api.ActualizarAsync("Premio", "id", id, datos);
+        var resultado = await Api.ActualizarAsync("Pasantia", "id", id, datos);
         mensaje = resultado.mensaje;
         if (resultado.exito) { Limpiar(); await CargarDatos(); }
     }
 
     private async Task Eliminar(string idEliminar)
     {
-        var resultado = await Api.EliminarAsync("Premio", "id", idEliminar);
+        var resultado = await Api.EliminarAsync("Pasantia", "id", idEliminar);
         mensaje = resultado.mensaje;
         await CargarDatos();
     }
@@ -110,20 +106,14 @@
     {
         id = item["id"]?.ToString() ?? "";
         nombre = item["nombre"]?.ToString() ?? "";
-        descripcion = item["descripcion"]?.ToString() ?? "";
-        entidadOtorgante = item["entidadOtorgante"]?.ToString() ?? "";
         pais = item["pais"]?.ToString() ?? "";
+        empresa = item["empresa"]?.ToString() ?? "";
+        descripcion = item["descripcion"]?.ToString() ?? "";
         programa = item["programa"]?.ToString() ?? "";
-
-        if (DateTime.TryParse(item["fecha"]?.ToString(), out var f))
-            fecha = f;
-        else
-            fecha = null;
     }
 
     private void Limpiar()
     {
-        id = nombre = descripcion = entidadOtorgante = pais = programa = mensaje = "";
-        fecha = null;
+        id = nombre = pais = empresa = descripcion = programa = mensaje = "";
     }
 }

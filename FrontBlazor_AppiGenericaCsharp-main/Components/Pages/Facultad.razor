@@ -1,4 +1,4 @@
-﻿@page "/Facultad"
+﻿@page "/facultad"
 @rendermode InteractiveServer
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
@@ -8,9 +8,31 @@
     <label>ID</label>
     <input class="form-control" @bind="id" />
 </div>
+
 <div class="mb-3">
     <label>Nombre</label>
     <input class="form-control" @bind="nombre" />
+</div>
+
+<div class="mb-3">
+    <label>Tipo</label>
+    <input class="form-control" @bind="tipo" />
+</div>
+
+<div class="mb-3">
+    <label>Fecha inicio</label>
+    <input type="date" class="form-control" @bind="fechaIn" />
+</div>
+
+<div class="mb-3">
+    <label>Universidad</label>
+    <select class="form-control" @bind="universidad">
+        <option value="">Seleccione una universidad</option>
+        @foreach (var uni in universidades)
+        {
+            <option value="@uni["id"]">@uni["nombre"]</option>
+        }
+    </select>
 </div>
 
 <div class="mb-3">
@@ -24,18 +46,28 @@
     <div class="alert alert-info">@mensaje</div>
 }
 
-<h4>Listado de Facultades</h4>
+<h4>Listado de facultades</h4>
 <table class="table table-bordered">
     <thead>
-        <tr><th>ID</th><th>Nombre</th><th>Acciones</th></tr>
+        <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Tipo</th>
+            <th>Fecha inicio</th>
+            <th>Universidad</th>
+            <th>Acciones</th>
+        </tr>
     </thead>
     <tbody>
-        @foreach (var item in Facultads)
+        @foreach (var item in facultades)
         {
             var idEliminar = item["id"]?.ToString() ?? "";
             <tr>
                 <td>@item["id"]</td>
                 <td>@item["nombre"]</td>
+                <td>@item["tipo"]</td>
+                <td>@item["fechaIn"]</td>
+                <td>@item["universidad"]</td>
                 <td>
                     <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
                     <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
@@ -46,34 +78,86 @@
 </table>
 
 @code {
-    private List<Dictionary<string, object?>> Facultads = new();
-    private string id = "", nombre = "", mensaje = "";
+    private List<Dictionary<string, object?>> facultades = new();
+    private string id = "", nombre = "", tipo = "", universidad = "", mensaje = "";
+    private DateTime? fechaIn;
 
-    protected override async Task OnInitializedAsync() => await CargarDatos();
-    private async Task CargarDatos() => Facultads = await Api.ListarAsync("enfoque");
+    private async Task CargarDatos()
+        => facultades = await Api.ListarAsync("Facultad");
+
+    private List<Dictionary<string, object?>> universidades = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+    await CargarDatos();
+    await CargarUniversidades();
+        }
+
+    private async Task CargarUniversidades()
+    => universidades = await Api.ListarAsync("Universidad");
 
     private async Task Guardar()
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre))
+        if (string.IsNullOrWhiteSpace(id) ||
+            string.IsNullOrWhiteSpace(nombre) ||
+            string.IsNullOrWhiteSpace(tipo) ||
+            !fechaIn.HasValue ||
+            string.IsNullOrWhiteSpace(universidad))
         {
-            mensaje = "Completa todos los campos."; StateHasChanged(); return;
+            mensaje = "Completa todos los campos.";
+            StateHasChanged();
+            return;
         }
-        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre } };
+
+        var datos = new Dictionary<string, object?>
+        {
+            { "id", id },
+            { "nombre", nombre },
+            { "tipo", tipo },
+            { "fechaIn", fechaIn?.ToString("yyyy-MM-dd") },
+            { "universidad", universidad }
+        };
+
         var resultado = await Api.CrearAsync("Facultad", datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
     }
 
     private async Task Actualizar()
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre))
+        if (string.IsNullOrWhiteSpace(id) ||
+            string.IsNullOrWhiteSpace(nombre) ||
+            string.IsNullOrWhiteSpace(tipo) ||
+            !fechaIn.HasValue ||
+            string.IsNullOrWhiteSpace(universidad))
         {
-            mensaje = "Completa todos los campos."; StateHasChanged(); return;
+            mensaje = "Completa todos los campos.";
+            StateHasChanged();
+            return;
         }
-        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre }};
+
+        var datos = new Dictionary<string, object?>
+        {
+            { "id", id },
+            { "nombre", nombre },
+            { "tipo", tipo },
+            { "fechaIn", fechaIn?.ToString("yyyy-MM-dd") },
+            { "universidad", universidad }
+        };
+
         var resultado = await Api.ActualizarAsync("Facultad", "id", id, datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
     }
 
     private async Task Eliminar(string idEliminar)
@@ -87,8 +171,24 @@
     {
         id = item["id"]?.ToString() ?? "";
         nombre = item["nombre"]?.ToString() ?? "";
+        tipo = item["tipo"]?.ToString() ?? "";
+        universidad = item["universidad"]?.ToString() ?? "";
+
+        if (DateTime.TryParse(item["fechaIn"]?.ToString(), out var f))
+            fechaIn = f;
+        else
+            fechaIn = null;
+
         mensaje = "Registro cargado para edición.";
     }
 
-    private void Limpiar() { id = ""; nombre = ""; mensaje = ""; }
+    private void Limpiar()
+    {
+        id = "";
+        nombre = "";
+        tipo = "";
+        fechaIn = null;
+        universidad = "";
+        mensaje = "";
+    }
 }

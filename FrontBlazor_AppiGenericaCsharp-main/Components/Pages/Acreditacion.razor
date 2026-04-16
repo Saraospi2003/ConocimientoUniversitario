@@ -1,21 +1,41 @@
-﻿@page "/Acreditacion"
+﻿@page "/acreditacion"
 @rendermode InteractiveServer
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD Acreditacion</h3>
+<h3>CRUD Acreditación</h3>
 
 <div class="mb-3">
-    <label>ID</label>
-    <input class="form-control" @bind="id" />
+    <label>Resolución</label>
+    <input class="form-control" @bind="resolucion" />
 </div>
+
 <div class="mb-3">
-    <label>Nombre</label>
-    <input class="form-control" @bind="nombre" />
+    <label>Tipo</label>
+    <input class="form-control" @bind="tipo" />
 </div>
+
 <div class="mb-3">
-    <label>Descripción</label>
-    <input class="form-control" @bind="descripcion" />
+    <label>Calificación</label>
+    <input class="form-control" @bind="calificacion" />
 </div>
+
+<div class="mb-3">
+    <label>Fecha inicio</label>
+    <input class="form-control" @bind="fechaInicio" />
+</div>
+
+<div class="mb-3">
+    <label>Fecha fin</label>
+    <input class="form-control" @bind="fechaFin" />
+</div>
+
+<select class="form-control" @bind="programa">
+    <option value="">Seleccione un programa</option>
+    @foreach (var pro in programasLista)
+    {
+        <option value="@pro["id"]">@pro["nombre"]</option>
+    }
+</select>
 
 <div class="mb-3">
     <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
@@ -28,19 +48,26 @@
     <div class="alert alert-info">@mensaje</div>
 }
 
-<h4>Listado de Acreditaciones</h4>
+<h4>Listado de acreditaciones</h4>
 <table class="table table-bordered">
     <thead>
-        <tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr>
+        <tr>
+            <th>Resolución</th>
+            <th>Tipo</th>
+            <th>Calificación</th>
+            <th>Programa</th>
+            <th>Acciones</th>
+        </tr>
     </thead>
     <tbody>
-        @foreach (var item in Acreditacions)
+        @foreach (var item in acreditaciones)
         {
-            var idEliminar = item["id"]?.ToString() ?? "";
+            var idEliminar = item["resolucion"]?.ToString() ?? "";
             <tr>
-                <td>@item["id"]</td>
-                <td>@item["nombre"]</td>
-                <td>@item["descripcion"]</td>
+                <td>@item["resolucion"]</td>
+                <td>@item["tipo"]</td>
+                <td>@item["calificacion"]</td>
+                <td>@item["programa"]</td>
                 <td>
                     <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
                     <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
@@ -51,19 +78,42 @@
 </table>
 
 @code {
-    private List<Dictionary<string, object?>> Acreditacions = new();
-    private string id = "", nombre = "", descripcion = "", mensaje = "";
+    private List<Dictionary<string, object?>> acreditaciones = new();
+    private string resolucion = "", tipo = "", calificacion = "", fechaInicio = "", fechaFin = "", programa = "", mensaje = "";
 
-    protected override async Task OnInitializedAsync() => await CargarDatos();
-    private async Task CargarDatos() => Acreditacions = await Api.ListarAsync("Acreditacion");
+    private List<Dictionary<string, object?>> programasLista = new();
+
+    private async Task CargarProgramas()
+    => programasLista = await Api.ListarAsync("Programa");
+    protected override async Task OnInitializedAsync()
+{
+    await CargarDatos();
+    await CargarProgramas();
+}
+
+    private async Task CargarDatos()
+        => acreditaciones = await Api.ListarAsync("Acreditacion");
 
     private async Task Guardar()
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(descripcion))
+        if (string.IsNullOrWhiteSpace(resolucion) || string.IsNullOrWhiteSpace(tipo) ||
+            string.IsNullOrWhiteSpace(calificacion) || string.IsNullOrWhiteSpace(fechaInicio) ||
+            string.IsNullOrWhiteSpace(fechaFin) || string.IsNullOrWhiteSpace(programa))
         {
-            mensaje = "Completa todos los campos."; StateHasChanged(); return;
+            mensaje = "Completa todos los campos.";
+            return;
         }
-        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre }, { "descripcion", descripcion } };
+
+        var datos = new Dictionary<string, object?>
+        {
+            { "resolucion", resolucion },
+            { "tipo", tipo },
+            { "calificacion", calificacion },
+            { "fechaInicio", fechaInicio },
+            { "fechaFin", fechaFin },
+            { "programa", programa }
+        };
+
         var resultado = await Api.CrearAsync("Acreditacion", datos);
         mensaje = resultado.mensaje;
         if (resultado.exito) { Limpiar(); await CargarDatos(); }
@@ -71,30 +121,47 @@
 
     private async Task Actualizar()
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(descripcion))
+        var datos = new Dictionary<string, object?>
         {
-            mensaje = "Completa todos los campos."; StateHasChanged(); return;
-        }
-        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre }, { "descripcion", descripcion } };
-        var resultado = await Api.ActualizarAsync("Acreditacion", "id", id, datos);
+            { "resolucion", resolucion },
+            { "tipo", tipo },
+            { "calificacion", calificacion },
+            { "fechaInicio", fechaInicio },
+            { "fechaFin", fechaFin },
+            { "programa", programa }
+        };
+
+        var resultado = await Api.ActualizarAsync("Acreditacion", "resolucion", resolucion, datos);
         mensaje = resultado.mensaje;
         if (resultado.exito) { Limpiar(); await CargarDatos(); }
     }
 
     private async Task Eliminar(string idEliminar)
     {
-        var resultado = await Api.EliminarAsync("Acreditacion", "id", idEliminar);
+        var resultado = await Api.EliminarAsync("Acreditacion", "resolucion", idEliminar);
         mensaje = resultado.mensaje;
         await CargarDatos();
     }
 
     private void Seleccionar(Dictionary<string, object?> item)
     {
-        id = item["id"]?.ToString() ?? "";
-        nombre = item["nombre"]?.ToString() ?? "";
-        descripcion = item["descripcion"]?.ToString() ?? "";
+        resolucion = item["resolucion"]?.ToString() ?? "";
+        tipo = item["tipo"]?.ToString() ?? "";
+        calificacion = item["calificacion"]?.ToString() ?? "";
+        fechaInicio = item["fechaInicio"]?.ToString() ?? "";
+        fechaFin = item["fechaFin"]?.ToString() ?? "";
+        programa = item["programa"]?.ToString() ?? "";
         mensaje = "Registro cargado para edición.";
     }
 
-    private void Limpiar() { id = ""; nombre = ""; descripcion = ""; mensaje = ""; }
+    private void Limpiar()
+    {
+        resolucion = "";
+        tipo = "";
+        calificacion = "";
+        fechaInicio = "";
+        fechaFin = "";
+        programa = "";
+        mensaje = "";
+    }
 }

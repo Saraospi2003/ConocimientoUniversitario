@@ -1,25 +1,29 @@
-﻿@page "/DocenteDepartamento"
+﻿@page "/docentedepartamento"
 @rendermode InteractiveServer
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD DocenteDepartamento</h3>
+<h3>CRUD Docente Departamento</h3>
+
+<div class="mb-3"><label>Docente</label><input class="form-control" @bind="docente" /></div>
 
 <div class="mb-3">
-    <label>ID</label>
-    <input class="form-control" @bind="id" />
+    <label>Departamento</label>
+    <select class="form-control" @bind="departamento">
+        <option value="">Seleccione una facultad</option>
+        @foreach (var fac in facultadesLista)
+        {
+            <option value="@fac["id"]">@fac["nombre"]</option>
+        }
+    </select>
 </div>
-<div class="mb-3">
-    <label>Nombre</label>
-    <input class="form-control" @bind="nombre" />
-</div>
-<div class="mb-3">
-    <label>Descripción</label>
-    <input class="form-control" @bind="descripcion" />
-</div>
+
+<div class="mb-3"><label>Dedicación</label><input class="form-control" @bind="dedicacion" /></div>
+<div class="mb-3"><label>Modalidad</label><input class="form-control" @bind="modalidad" /></div>
+<div class="mb-3"><label>Fecha ingreso</label><input type="date" class="form-control" @bind="fechaIngreso" /></div>
+<div class="mb-3"><label>Fecha salida</label><input type="date" class="form-control" @bind="fechaSalida" /></div>
 
 <div class="mb-3">
     <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
-    <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
     <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
 </div>
 
@@ -28,22 +32,26 @@
     <div class="alert alert-info">@mensaje</div>
 }
 
-<h4>Listado de DocenteDepartamentos</h4>
+<h4>Listado Docente Departamento</h4>
 <table class="table table-bordered">
     <thead>
-        <tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr>
+        <tr><th>Docente</th><th>Departamento</th><th>Dedicación</th><th>Modalidad</th><th>Fecha ingreso</th><th>Fecha salida</th><th>Acciones</th></tr>
     </thead>
     <tbody>
-        @foreach (var item in DocenteDepartamentos)
+        @foreach (var item in registros)
         {
-            var idEliminar = item["id"]?.ToString() ?? "";
+            var docenteEliminar = item["docente"]?.ToString() ?? "";
+            var depEliminar = item["departamento"]?.ToString() ?? "";
+
             <tr>
-                <td>@item["id"]</td>
-                <td>@item["nombre"]</td>
-                <td>@item["descripcion"]</td>
+                <td>@item["docente"]</td>
+                <td>@item["departamento"]</td>
+                <td>@item["dedicacion"]</td>
+                <td>@item["modalidad"]</td>
+                <td>@item["fechaIngreso"]</td>
+                <td>@item["fechaSalida"]</td>
                 <td>
-                    <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
+                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(docenteEliminar, depEliminar)">Eliminar</button>
                 </td>
             </tr>
         }
@@ -51,50 +59,65 @@
 </table>
 
 @code {
-    private List<Dictionary<string, object?>> DocenteDepartamentos = new();
-    private string id = "", nombre = "", descripcion = "", mensaje = "";
+    private List<Dictionary<string, object?>> registros = new();
+    private List<Dictionary<string, object?>> facultadesLista = new();
 
-    protected override async Task OnInitializedAsync() => await CargarDatos();
-    private async Task CargarDatos() => DocenteDepartamentos = await Api.ListarAsync("DocenteDepartamento");
+    private string docente = "", departamento = "", dedicacion = "", modalidad = "", mensaje = "";
+    private DateTime? fechaIngreso;
+    private DateTime? fechaSalida;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+        await CargarFacultades();
+    }
+
+    private async Task CargarDatos() => registros = await Api.ListarAsync("DocenteDepartamento");
+    private async Task CargarFacultades() => facultadesLista = await Api.ListarAsync("Facultad");
 
     private async Task Guardar()
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(descripcion))
+        var datos = new Dictionary<string, object?>
         {
-            mensaje = "Completa todos los campos."; StateHasChanged(); return;
-        }
-        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre }, { "descripcion", descripcion } };
+            { "docente", docente },
+            { "departamento", departamento },
+            { "dedicacion", dedicacion },
+            { "modalidad", modalidad },
+            { "fechaIngreso", fechaIngreso?.ToString("yyyy-MM-dd") },
+            { "fechaSalida", fechaSalida?.ToString("yyyy-MM-dd") }
+        };
+
         var resultado = await Api.CrearAsync("DocenteDepartamento", datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
-    }
 
-    private async Task Actualizar()
-    {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(descripcion))
+        if (resultado.exito)
         {
-            mensaje = "Completa todos los campos."; StateHasChanged(); return;
+            Limpiar();
+            await CargarDatos();
         }
-        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre }, { "descripcion", descripcion } };
-        var resultado = await Api.ActualizarAsync("DocenteDepartamento", "id", id, datos);
-        mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
     }
 
-    private async Task Eliminar(string idEliminar)
+    private async Task Eliminar(string docenteEliminar, string depEliminar)
     {
-        var resultado = await Api.EliminarAsync("DocenteDepartamento", "id", idEliminar);
+        var resultado = await Api.EliminarCompuestoAsync("DocenteDepartamento",
+            new Dictionary<string, string>
+            {
+                { "docente", docenteEliminar },
+                { "departamento", depEliminar }
+            });
+
         mensaje = resultado.mensaje;
         await CargarDatos();
     }
 
-    private void Seleccionar(Dictionary<string, object?> item)
+    private void Limpiar()
     {
-        id = item["id"]?.ToString() ?? "";
-        nombre = item["nombre"]?.ToString() ?? "";
-        descripcion = item["descripcion"]?.ToString() ?? "";
-        mensaje = "Registro cargado para edición.";
+        docente = "";
+        departamento = "";
+        dedicacion = "";
+        modalidad = "";
+        fechaIngreso = null;
+        fechaSalida = null;
+        mensaje = "";
     }
-
-    private void Limpiar() { id = ""; nombre = ""; descripcion = ""; mensaje = ""; }
 }

@@ -1,21 +1,25 @@
-﻿@page "/Alianza"
+﻿@page "/alianza"
 @rendermode InteractiveServer
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
 <h3>CRUD Alianza</h3>
 
+<div class="mb-3"><label>ID</label><input class="form-control" @bind="id" /></div>
+
 <div class="mb-3">
-    <label>ID</label>
-    <input class="form-control" @bind="id" />
+    <label>Departamento</label>
+    <select class="form-control" @bind="departamento">
+        <option value="">Seleccione una facultad</option>
+        @foreach (var fac in facultadesLista)
+        {
+            <option value="@fac["id"]">@fac["nombre"]</option>
+        }
+    </select>
 </div>
-<div class="mb-3">
-    <label>Nombre</label>
-    <input class="form-control" @bind="nombre" />
-</div>
-<div class="mb-3">
-    <label>Descripción</label>
-    <input class="form-control" @bind="descripcion" />
-</div>
+
+<div class="mb-3"><label>Fecha Inicio</label><input type="date" class="form-control" @bind="fechaInicio" /></div>
+<div class="mb-3"><label>Fecha Fin</label><input type="date" class="form-control" @bind="fechaFin" /></div>
+<div class="mb-3"><label>Docente</label><input class="form-control" @bind="docente" /></div>
 
 <div class="mb-3">
     <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
@@ -28,19 +32,21 @@
     <div class="alert alert-info">@mensaje</div>
 }
 
-<h4>Listado de Alianzas</h4>
+<h4>Listado de alianzas</h4>
 <table class="table table-bordered">
     <thead>
-        <tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr>
+        <tr><th>ID</th><th>Departamento</th><th>Fecha Inicio</th><th>Fecha Fin</th><th>Docente</th><th>Acciones</th></tr>
     </thead>
     <tbody>
-        @foreach (var item in Alianzas)
+        @foreach (var item in alianzas)
         {
             var idEliminar = item["id"]?.ToString() ?? "";
             <tr>
                 <td>@item["id"]</td>
-                <td>@item["nombre"]</td>
-                <td>@item["descripcion"]</td>
+                <td>@item["departamento"]</td>
+                <td>@item["fechaInicio"]</td>
+                <td>@item["fechaFin"]</td>
+                <td>@item["docente"]</td>
                 <td>
                     <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
                     <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
@@ -51,19 +57,32 @@
 </table>
 
 @code {
-    private List<Dictionary<string, object?>> Alianzas = new();
-    private string id = "", nombre = "", descripcion = "", mensaje = "";
+    private List<Dictionary<string, object?>> alianzas = new();
+    private List<Dictionary<string, object?>> facultadesLista = new();
 
-    protected override async Task OnInitializedAsync() => await CargarDatos();
-    private async Task CargarDatos() => Alianzas = await Api.ListarAsync("Alianza");
+    private string id = "", departamento = "", docente = "", mensaje = "";
+    private DateTime? fechaInicio;
+    private DateTime? fechaFin;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+        await CargarFacultades();
+    }
+
+    private async Task CargarDatos() => alianzas = await Api.ListarAsync("Alianza");
+    private async Task CargarFacultades() => facultadesLista = await Api.ListarAsync("Facultad");
 
     private async Task Guardar()
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(descripcion))
+        var datos = new Dictionary<string, object?>
         {
-            mensaje = "Completa todos los campos."; StateHasChanged(); return;
-        }
-        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre }, { "descripcion", descripcion } };
+            { "id", id }, { "departamento", departamento },
+            { "fechaInicio", fechaInicio?.ToString("yyyy-MM-dd") },
+            { "fechaFin", fechaFin?.ToString("yyyy-MM-dd") },
+            { "docente", docente }
+        };
+
         var resultado = await Api.CrearAsync("Alianza", datos);
         mensaje = resultado.mensaje;
         if (resultado.exito) { Limpiar(); await CargarDatos(); }
@@ -71,11 +90,14 @@
 
     private async Task Actualizar()
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(descripcion))
+        var datos = new Dictionary<string, object?>
         {
-            mensaje = "Completa todos los campos."; StateHasChanged(); return;
-        }
-        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre }, { "descripcion", descripcion } };
+            { "id", id }, { "departamento", departamento },
+            { "fechaInicio", fechaInicio?.ToString("yyyy-MM-dd") },
+            { "fechaFin", fechaFin?.ToString("yyyy-MM-dd") },
+            { "docente", docente }
+        };
+
         var resultado = await Api.ActualizarAsync("Alianza", "id", id, datos);
         mensaje = resultado.mensaje;
         if (resultado.exito) { Limpiar(); await CargarDatos(); }
@@ -91,10 +113,27 @@
     private void Seleccionar(Dictionary<string, object?> item)
     {
         id = item["id"]?.ToString() ?? "";
-        nombre = item["nombre"]?.ToString() ?? "";
-        descripcion = item["descripcion"]?.ToString() ?? "";
-        mensaje = "Registro cargado para edición.";
+        departamento = item["departamento"]?.ToString() ?? "";
+        docente = item["docente"]?.ToString() ?? "";
+
+        if (DateTime.TryParse(item["fechaInicio"]?.ToString(), out var fi))
+            fechaInicio = fi;
+        else
+            fechaInicio = null;
+
+        if (DateTime.TryParse(item["fechaFin"]?.ToString(), out var ff))
+            fechaFin = ff;
+        else
+            fechaFin = null;
     }
 
-    private void Limpiar() { id = ""; nombre = ""; descripcion = ""; mensaje = ""; }
+    private void Limpiar()
+    {
+        id = "";
+        departamento = "";
+        docente = "";
+        fechaInicio = null;
+        fechaFin = null;
+        mensaje = "";
+    }
 }

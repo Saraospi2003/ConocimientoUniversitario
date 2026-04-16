@@ -1,25 +1,33 @@
-﻿@page "/EnfoqueRc"
+﻿@page "/enfoque_rc"
 @rendermode InteractiveServer
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD EnfoqueRc</h3>
+<h3>CRUD Enfoque_rc</h3>
 
 <div class="mb-3">
-    <label>ID</label>
-    <input class="form-control" @bind="id" />
+    <label>Enfoque</label>
+    <select class="form-control" @bind="enfoque">
+        <option value="">Seleccione un enfoque</option>
+        @foreach (var enf in enfoquesLista)
+        {
+            <option value="@enf["id"]">@enf["nombre"]</option>
+        }
+    </select>
 </div>
+
 <div class="mb-3">
-    <label>Nombre</label>
-    <input class="form-control" @bind="nombre" />
-</div>
-<div class="mb-3">
-    <label>Descripción</label>
-    <input class="form-control" @bind="descripcion" />
+    <label>Registro Calificado</label>
+    <select class="form-control" @bind="registroCalificado">
+        <option value="">Seleccione un registro</option>
+        @foreach (var reg in registrosLista)
+        {
+            <option value="@reg["codigo"]">@reg["codigo"]</option>
+        }
+    </select>
 </div>
 
 <div class="mb-3">
     <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
-    <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
     <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
 </div>
 
@@ -28,22 +36,21 @@
     <div class="alert alert-info">@mensaje</div>
 }
 
-<h4>Listado de enfoquesRc</h4>
+<h4>Listado de Enfoque_rc</h4>
 <table class="table table-bordered">
     <thead>
-        <tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr>
+        <tr><th>Enfoque</th><th>Registro Calificado</th><th>Acciones</th></tr>
     </thead>
     <tbody>
-        @foreach (var item in enfoqueRcs)
+        @foreach (var item in registros)
         {
-            var idEliminar = item["id"]?.ToString() ?? "";
+            var enfoqueEliminar = item["enfoque"]?.ToString() ?? "";
+            var registroEliminar = item["registroCalificado"]?.ToString() ?? "";
             <tr>
-                <td>@item["id"]</td>
-                <td>@item["nombre"]</td>
-                <td>@item["descripcion"]</td>
+                <td>@item["enfoque"]</td>
+                <td>@item["registroCalificado"]</td>
                 <td>
-                    <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
+                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(enfoqueEliminar, registroEliminar)">Eliminar</button>
                 </td>
             </tr>
         }
@@ -51,50 +58,53 @@
 </table>
 
 @code {
-    private List<Dictionary<string, object?>> enfoqueRcs = new();
-    private string id = "", nombre = "", descripcion = "", mensaje = "";
+    private List<Dictionary<string, object?>> registros = new();
+    private List<Dictionary<string, object?>> enfoquesLista = new();
+    private List<Dictionary<string, object?>> registrosLista = new();
 
-    protected override async Task OnInitializedAsync() => await CargarDatos();
-    private async Task CargarDatos() => enfoqueRcs = await Api.ListarAsync("enfoqueRc");
+    private string enfoque = "", registroCalificado = "", mensaje = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+        await CargarEnfoques();
+        await CargarRegistros();
+    }
+
+    private async Task CargarDatos() => registros = await Api.ListarAsync("EnfoqueRc");
+    private async Task CargarEnfoques() => enfoquesLista = await Api.ListarAsync("Enfoque");
+    private async Task CargarRegistros() => registrosLista = await Api.ListarAsync("RegistroCalificado");
 
     private async Task Guardar()
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(descripcion))
+        var datos = new Dictionary<string, object?>
         {
-            mensaje = "Completa todos los campos."; StateHasChanged(); return;
-        }
-        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre }, { "descripcion", descripcion } };
-        var resultado = await Api.CrearAsync("enfoqueRc", datos);
+            { "enfoque", enfoque },
+            { "registroCalificado", registroCalificado }
+        };
+
+        var resultado = await Api.CrearAsync("EnfoqueRc", datos);
         mensaje = resultado.mensaje;
         if (resultado.exito) { Limpiar(); await CargarDatos(); }
     }
 
-    private async Task Actualizar()
+    private async Task Eliminar(string enfoqueEliminar, string registroEliminar)
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(descripcion))
-        {
-            mensaje = "Completa todos los campos."; StateHasChanged(); return;
-        }
-        var datos = new Dictionary<string, object?> { { "id", id }, { "nombre", nombre }, { "descripcion", descripcion } };
-        var resultado = await Api.ActualizarAsync("enfoqueRc", "id", id, datos);
-        mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
-    }
+        var resultado = await Api.EliminarCompuestoAsync("EnfoqueRc",
+            new Dictionary<string, string>
+            {
+                { "enfoque", enfoqueEliminar },
+                { "registroCalificado", registroEliminar }
+            });
 
-    private async Task Eliminar(string idEliminar)
-    {
-        var resultado = await Api.EliminarAsync("enfoqueRc", "id", idEliminar);
         mensaje = resultado.mensaje;
         await CargarDatos();
     }
 
-    private void Seleccionar(Dictionary<string, object?> item)
+    private void Limpiar()
     {
-        id = item["id"]?.ToString() ?? "";
-        nombre = item["nombre"]?.ToString() ?? "";
-        descripcion = item["descripcion"]?.ToString() ?? "";
-        mensaje = "Registro cargado para edición.";
+        enfoque = "";
+        registroCalificado = "";
+        mensaje = "";
     }
-
-    private void Limpiar() { id = ""; nombre = ""; descripcion = ""; mensaje = ""; }
 }

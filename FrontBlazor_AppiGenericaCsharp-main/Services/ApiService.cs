@@ -196,5 +196,27 @@ namespace FrontBlazor_AppiGenericaCsharp.Services
 
             return lista;
         }
+
+        public async Task<(bool exito, string mensaje)> EliminarCompuestoAsync(
+    string controlador,
+    Dictionary<string, string> parametros)
+{
+    try
+    {
+        var ruta = string.Join("/", parametros.Values);
+        var response = await _http.DeleteAsync($"api/{controlador}/{ruta}");
+
+        if (response.IsSuccessStatusCode)
+            return (true, "Eliminado correctamente.");
+
+        var error = await response.Content.ReadAsStringAsync();
+        return (false, $"Error al eliminar {controlador}: {error}");
+    }
+    catch (Exception ex)
+    {
+        return (false, $"Error al eliminar {controlador}: {ex.Message}");
+    }
+}
+
     }
 }

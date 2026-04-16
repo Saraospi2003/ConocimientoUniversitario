@@ -1,0 +1,253 @@
+@page "/programa"
+@rendermode InteractiveServer
+@inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
+
+<h3>CRUD Programa</h3>
+
+<div class="mb-3">
+    <label>ID</label>
+    <input class="form-control" @bind="id" />
+</div>
+
+<div class="mb-3">
+    <label>Nombre</label>
+    <input class="form-control" @bind="nombre" />
+</div>
+
+<div class="mb-3">
+    <label>Tipo</label>
+    <input class="form-control" @bind="tipo" />
+</div>
+
+<div class="mb-3">
+    <label>Nivel</label>
+    <input class="form-control" @bind="nivel" />
+</div>
+
+<div class="mb-3">
+    <label>Fecha creación</label>
+    <input class="form-control" @bind="fechaCreacion" />
+</div>
+
+<div class="mb-3">
+    <label>Fecha cierre</label>
+    <input class="form-control" @bind="fechaCierre" />
+</div>
+
+<div class="mb-3">
+    <label>Número cohortes</label>
+    <input class="form-control" @bind="numCohortes" />
+</div>
+
+<div class="mb-3">
+    <label>Cantidad graduados</label>
+    <input class="form-control" @bind="cantGraduados" />
+</div>
+
+<div class="mb-3">
+    <label>Fecha actualización</label>
+    <input class="form-control" @bind="fechaActualizacion" />
+</div>
+
+<div class="mb-3">
+    <label>Ciudad</label>
+    <input class="form-control" @bind="ciudad" />
+</div>
+
+<select class="form-control" @bind="facultad">
+    <option value="">Seleccione una facultad</option>
+    @foreach (var fac in facultadesLista)
+    {
+        <option value="@fac["id"]">@fac["nombre"]</option>
+    }
+</select>
+
+<div class="mb-3">
+    <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
+    <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
+    <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(mensaje))
+{
+    <div class="alert alert-info">@mensaje</div>
+}
+
+<h4>Listado de programas</h4>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Tipo</th>
+            <th>Nivel</th>
+            <th>Ciudad</th>
+            <th>Facultad</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in programas)
+        {
+            var idEliminar = item["id"]?.ToString() ?? "";
+            <tr>
+                <td>@item["id"]</td>
+                <td>@item["nombre"]</td>
+                <td>@item["tipo"]</td>
+                <td>@item["nivel"]</td>
+                <td>@item["ciudad"]</td>
+                <td>@item["facultad"]</td>
+                <td>
+                    <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
+                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Dictionary<string, object?>> programas = new();
+    private string id = "", nombre = "", tipo = "", nivel = "", fechaCreacion = "", fechaCierre = "",
+                   numCohortes = "", cantGraduados = "", fechaActualizacion = "", ciudad = "", facultad = "", mensaje = "";
+
+    private List<Dictionary<string, object?>> facultadesLista = new();
+
+    private async Task CargarFacultades()
+    => facultadesLista = await Api.ListarAsync("Facultad");
+    protected override async Task OnInitializedAsync()
+{
+    await CargarDatos();
+    await CargarFacultades();
+}
+
+    private async Task CargarDatos()
+        => programas = await Api.ListarAsync("Programa");
+
+    private async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(id) ||
+            string.IsNullOrWhiteSpace(nombre) ||
+            string.IsNullOrWhiteSpace(tipo) ||
+            string.IsNullOrWhiteSpace(nivel) ||
+            string.IsNullOrWhiteSpace(fechaCreacion) ||
+            string.IsNullOrWhiteSpace(fechaCierre) ||
+            string.IsNullOrWhiteSpace(numCohortes) ||
+            string.IsNullOrWhiteSpace(cantGraduados) ||
+            string.IsNullOrWhiteSpace(fechaActualizacion) ||
+            string.IsNullOrWhiteSpace(ciudad) ||
+            string.IsNullOrWhiteSpace(facultad))
+        {
+            mensaje = "Completa todos los campos.";
+            StateHasChanged();
+            return;
+        }
+
+        var datos = new Dictionary<string, object?>
+        {
+            { "id", id },
+            { "nombre", nombre },
+            { "tipo", tipo },
+            { "nivel", nivel },
+            { "fechaCreacion", fechaCreacion },
+            { "fechaCierre", fechaCierre },
+            { "numCohortes", numCohortes },
+            { "cantGraduados", cantGraduados },
+            { "fechaActualizacion", fechaActualizacion },
+            { "ciudad", ciudad },
+            { "facultad", facultad }
+        };
+
+        var resultado = await Api.CrearAsync("Programa", datos);
+        mensaje = resultado.mensaje;
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
+    }
+
+    private async Task Actualizar()
+    {
+        if (string.IsNullOrWhiteSpace(id) ||
+            string.IsNullOrWhiteSpace(nombre) ||
+            string.IsNullOrWhiteSpace(tipo) ||
+            string.IsNullOrWhiteSpace(nivel) ||
+            string.IsNullOrWhiteSpace(fechaCreacion) ||
+            string.IsNullOrWhiteSpace(fechaCierre) ||
+            string.IsNullOrWhiteSpace(numCohortes) ||
+            string.IsNullOrWhiteSpace(cantGraduados) ||
+            string.IsNullOrWhiteSpace(fechaActualizacion) ||
+            string.IsNullOrWhiteSpace(ciudad) ||
+            string.IsNullOrWhiteSpace(facultad))
+        {
+            mensaje = "Completa todos los campos.";
+            StateHasChanged();
+            return;
+        }
+
+        var datos = new Dictionary<string, object?>
+        {
+            { "id", id },
+            { "nombre", nombre },
+            { "tipo", tipo },
+            { "nivel", nivel },
+            { "fechaCreacion", fechaCreacion },
+            { "fechaCierre", fechaCierre },
+            { "numCohortes", numCohortes },
+            { "cantGraduados", cantGraduados },
+            { "fechaActualizacion", fechaActualizacion },
+            { "ciudad", ciudad },
+            { "facultad", facultad }
+        };
+
+        var resultado = await Api.ActualizarAsync("Programa", "id", id, datos);
+        mensaje = resultado.mensaje;
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
+    }
+
+    private async Task Eliminar(string idEliminar)
+    {
+        var resultado = await Api.EliminarAsync("Programa", "id", idEliminar);
+        mensaje = resultado.mensaje;
+        await CargarDatos();
+    }
+
+    private void Seleccionar(Dictionary<string, object?> item)
+    {
+        id = item["id"]?.ToString() ?? "";
+        nombre = item["nombre"]?.ToString() ?? "";
+        tipo = item["tipo"]?.ToString() ?? "";
+        nivel = item["nivel"]?.ToString() ?? "";
+        fechaCreacion = item["fechaCreacion"]?.ToString() ?? "";
+        fechaCierre = item["fechaCierre"]?.ToString() ?? "";
+        numCohortes = item["numCohortes"]?.ToString() ?? "";
+        cantGraduados = item["cantGraduados"]?.ToString() ?? "";
+        fechaActualizacion = item["fechaActualizacion"]?.ToString() ?? "";
+        ciudad = item["ciudad"]?.ToString() ?? "";
+        facultad = item["facultad"]?.ToString() ?? "";
+        mensaje = "Registro cargado para edición.";
+    }
+
+    private void Limpiar()
+    {
+        id = "";
+        nombre = "";
+        tipo = "";
+        nivel = "";
+        fechaCreacion = "";
+        fechaCierre = "";
+        numCohortes = "";
+        cantGraduados = "";
+        fechaActualizacion = "";
+        ciudad = "";
+        facultad = "";
+        mensaje = "";
+    }
+}
