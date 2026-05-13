@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using ApiGenericaCsharp.Models;
 using Microsoft.EntityFrameworkCore;
-
 namespace ApiGenericaCsharp.Data;
 
 public partial class BDUniversidadContext : DbContext
@@ -41,7 +40,7 @@ public partial class BDUniversidadContext : DbContext
 
     public virtual DbSet<Alianza> Alianzas { get; set; }
     public virtual DbSet<DocenteDepartamento> DocenteDepartamentos { get; set; }
-
+    public DbSet<Usuario> Usuarios { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Aliado>(entity =>
@@ -266,20 +265,17 @@ public partial class BDUniversidadContext : DbContext
                 .HasMaxLength(45)
                 .HasColumnName("tipo");
             entity.Property(e => e.Calificacion)
-                .HasMaxLength(45)
                 .HasColumnName("calificacion");
             entity.Property(e => e.FechaInicio)
-                .HasMaxLength(45)
                 .HasColumnName("fecha_inicio");
             entity.Property(e => e.FechaFin)
-                .HasMaxLength(45)
                 .HasColumnName("fecha_fin");
-            entity.Property(e => e.Programa)
+            entity.Property(e => e.ProgramaId)
                 .HasColumnName("programa");
 
-            entity.HasOne<Programa>()
+            entity.HasOne(e => e.Programa)
                 .WithMany()
-                .HasForeignKey(e => e.Programa)
+                .HasForeignKey(e => e.ProgramaId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_acreditacion_programa");
         });
