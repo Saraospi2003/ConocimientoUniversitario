@@ -1,356 +1,320 @@
 @page "/"
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <div class="home-container">
-    <section class="hero">
-        <div class="hero-content">
-            <h1>Sistema de Gestión Universitaria</h1>
-            <p>
-                Plataforma para administrar información de innovación curricular,
-                universidades, aliados, enfoques, prácticas estratégicas, aspectos
-                normativos y demás módulos académicos del sistema.
+
+    @if (!cargado)
+    {
+        <div class="loading-card">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-3">Cargando información del usuario...</p>
+        </div>
+    }
+    else if (string.IsNullOrEmpty(nombre))
+    {
+        <section class="hero-card">
+            <div class="hero-content">
+                <span class="badge-custom">Sistema de Innovación Universitaria</span>
+
+                <h1>Bienvenido al sistema</h1>
+
+                <p>
+                    Plataforma para gestionar información académica relacionada con universidades,
+                    facultades, programas, acreditaciones, innovación curricular y procesos institucionales.
+                </p>
+
+                <div class="hero-buttons">
+                    <button class="btn btn-primary btn-lg" @onclick="IrLogin">
+                        Iniciar sesión
+                    </button>
+
+                    <button class="btn btn-outline-primary btn-lg" @onclick="IrRegistro">
+                        Registrarse
+                    </button>
+                </div>
+            </div>
+
+            <div class="hero-panel">
+                <h4>Roles disponibles</h4>
+
+                <div class="role-mini-card admin">
+                    <strong>Administrador</strong>
+                    <span>Acceso completo al sistema.</span>
+                </div>
+
+                <div class="role-mini-card docente">
+                    <strong>Docente</strong>
+                    <span>Puede registrar y actualizar información.</span>
+                </div>
+
+                <div class="role-mini-card consultor">
+                    <strong>Consultor</strong>
+                    <span>Solo puede visualizar los datos.</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="roles-section">
+            <h2>Control de acceso por roles</h2>
+            <p class="section-subtitle">
+                Cada usuario tiene permisos diferentes según el rol seleccionado al registrarse.
             </p>
 
-            <div class="hero-buttons">
-                <a class="btn-primary" href="/universidad">Comenzar</a>
-                <a class="btn-secondary" href="/programa">Ver programas</a>
+            <div class="roles-grid">
+                <div class="role-card admin-card">
+                    <div class="role-icon">👑</div>
+                    <h3>Administrador</h3>
+                    <p>Gestiona todo el sistema.</p>
+
+                    <ul>
+                        <li>Puede ver todos los módulos.</li>
+                        <li>Puede crear registros.</li>
+                        <li>Puede editar registros.</li>
+                        <li>Puede eliminar registros.</li>
+                        <li>Puede gestionar usuarios.</li>
+                        <li>Puede cambiar roles.</li>
+                    </ul>
+                </div>
+
+                <div class="role-card docente-card">
+                    <div class="role-icon">📚</div>
+                    <h3>Docente</h3>
+                    <p>Registra información académica.</p>
+
+                    <ul>
+                        <li>Puede iniciar sesión.</li>
+                        <li>Puede consultar información.</li>
+                        <li>Puede crear registros.</li>
+                        <li>Puede editar registros.</li>
+                        <li>No puede eliminar registros.</li>
+                        <li>No puede cambiar roles.</li>
+                    </ul>
+                </div>
+
+                <div class="role-card consultor-card">
+                    <div class="role-icon">👁️</div>
+                    <h3>Consultor</h3>
+                    <p>Acceso de solo lectura.</p>
+
+                    <ul>
+                        <li>Puede iniciar sesión.</li>
+                        <li>Puede ver la información.</li>
+                        <li>No puede crear registros.</li>
+                        <li>No puede editar registros.</li>
+                        <li>No puede eliminar registros.</li>
+                        <li>No puede administrar usuarios.</li>
+                    </ul>
+                </div>
             </div>
-        </div>
+        </section>
+    }
+    else
+    {
+        <section class="welcome-card">
+            <div>
+                <span class="badge-custom">Sesión iniciada</span>
+                <h1>Bienvenida, @nombre</h1>
 
-        <div class="hero-card">
-            <h3>Módulos disponibles</h3>
-            <ul>
-                <li>Universidad</li>
-                <li>Aliado</li>
-                <li>Enfoque</li>
-                <li>Facultad</li>
-                <li>Acreditación</li>
-                <li>aa_rc</li>
-                <li>Aspecto Normativo</li>
-                <li>Car. Innovación</li>
-                <li>Práctica Estrategia</li>
-                <li>Enfoque_rc</li>
-                <li>Programa_pe</li>
-                <li>Pasantía</li>
-                <li>An_programa</li>
-                <li>Programa_ac</li>
-                <li>Docente Departamento</li>
-                <li>Alianza</li>
-                <li>Programa_ci</li>
-                <li>Actividad Académica</li>
-                <li>Premio</li>
-                <li>Registro Calificado</li>
-                <li>Programa</li>
-            </ul>
-        </div>
-    </section>
+                <p>
+                    Has ingresado correctamente al sistema de gestión de innovación universitaria.
+                </p>
+            </div>
 
-    <section class="cards-section">
-        <div class="info-card">
-            <div class="icon">🎓</div>
-            <h4>Universidad</h4>
-            <p>Gestiona la información principal de las instituciones universitarias.</p>
-            <a href="/universidad">Ir a Universidad</a>
-        </div>
+            <div class="current-role-card @ClaseRol">
+                <span>Rol actual</span>
+                <strong>@rol</strong>
+            </div>
+        </section>
 
-        <div class="info-card">
-            <div class="icon">🤝</div>
-            <h4>Aliado</h4>
-            <p>Administra los aliados estratégicos vinculados al sistema.</p>
-            <a href="/aliado">Ir a Aliado</a>
-        </div>
+        <section class="permission-card">
+            <h2>¿Qué puedes hacer en la aplicación?</h2>
 
-        <div class="info-card">
-            <div class="icon">💡</div>
-            <h4>Car. Innovación</h4>
-            <p>Registra las características de innovación del entorno curricular.</p>
-            <a href="/carinnovacion">Ir a Car. Innovación</a>
-        </div>
+            @if (rol == "Administrador")
+            {
+                <div class="permission-banner admin-banner">
+                    <h3>👑 Administrador</h3>
+                    <p>Tienes acceso completo al sistema y puedes gestionar usuarios.</p>
+                </div>
 
-        <div class="info-card">
-            <div class="icon">📘</div>
-            <h4>Práctica Estrategia</h4>
-            <p>Gestiona estrategias y prácticas aplicadas al modelo educativo.</p>
-            <a href="/practicaestrategia">Ir a Práctica Estrategia</a>
-        </div>
+                <div class="permissions-grid">
+                    <div>✅ Ver módulos</div>
+                    <div>✅ Crear registros</div>
+                    <div>✅ Editar registros</div>
+                    <div>✅ Eliminar registros</div>
+                    <div>✅ Gestionar usuarios</div>
+                    <div>✅ Cambiar roles</div>
+                </div>
+            }
+            else if (rol == "Docente")
+            {
+                <div class="permission-banner docente-banner">
+                    <h3>📚 Docente</h3>
+                    <p>Puedes registrar y actualizar información académica.</p>
+                </div>
 
-        <div class="info-card">
-            <div class="icon">🧭</div>
-            <h4>Enfoque</h4>
-            <p>Organiza los enfoques académicos y curriculares.</p>
-            <a href="/enfoque">Ir a Enfoque</a>
-        </div>
+                <div class="permissions-grid">
+                    <div>✅ Ver información</div>
+                    <div>✅ Crear registros</div>
+                    <div>✅ Editar registros</div>
+                    <div>❌ Eliminar registros</div>
+                    <div>❌ Gestionar usuarios</div>
+                    <div>❌ Cambiar roles</div>
+                </div>
+            }
+            else if (rol == "Consultor")
+            {
+                <div class="permission-banner consultor-banner">
+                    <h3>👁️ Consultor</h3>
+                    <p>Tienes acceso únicamente de visualización. No puedes modificar información.</p>
+                </div>
 
-        <div class="info-card">
-            <div class="icon">🏫</div>
-            <h4>Facultad</h4>
-            <p>Gestiona la información de las facultades.</p>
-            <a href="/facultad">Ir a Facultad</a>
-        </div>
+                <div class="permissions-grid">
+                    <div>✅ Ver información</div>
+                    <div>✅ Consultar módulos</div>
+                    <div>❌ Crear registros</div>
+                    <div>❌ Editar registros</div>
+                    <div>❌ Eliminar registros</div>
+                    <div>❌ Gestionar usuarios</div>
+                </div>
+            }
+            else
+            {
+                <div class="permission-banner">
+                    <h3>Rol no identificado</h3>
+                    <p>No se encontró un rol válido para este usuario.</p>
+                </div>
+            }
+        </section>
 
-        <div class="info-card">
-            <div class="icon">📋</div>
-            <h4>Acreditación</h4>
-            <p>Administra los procesos de acreditación del sistema.</p>
-            <a href="/acreditacion">Ir a Acreditación</a>
-        </div>
+        <section class="quick-access-card">
+            <h2>Accesos rápidos</h2>
+            <p>Opciones disponibles según tu rol.</p>
 
-        <div class="info-card">
-            <div class="icon">🗂️</div>
-            <h4>aa_rc</h4>
-            <p>Relaciona actividades académicas con registros calificados.</p>
-            <a href="/aarc">Ir a aa_rc</a>
-        </div>
+            <div class="quick-grid">
 
-        <div class="info-card">
-            <div class="icon">⚖️</div>
-            <h4>Aspecto Normativo</h4>
-            <p>Consulta y administra los lineamientos normativos del módulo.</p>
-            <a href="/aspectonormativo">Ir a Aspecto Normativo</a>
-        </div>
+                @if (rol == "Administrador")
+                {
+                    <button class="quick-button" @onclick="IrUniversidad">
+                        🏛️ Universidad
+                    </button>
 
-        <div class="info-card">
-            <div class="icon">🧾</div>
-            <h4>Enfoque_rc</h4>
-            <p>Gestiona la relación entre enfoques y registros calificados.</p>
-            <a href="/enfoque_rc">Ir a Enfoque_rc</a>
-        </div>
+                    <button class="quick-button" @onclick="IrFacultad">
+                        🎓 Facultad
+                    </button>
 
-        <div class="info-card">
-            <div class="icon">📚</div>
-            <h4>Programa_pe</h4>
-            <p>Gestiona la relación entre programas y prácticas estratégicas.</p>
-            <a href="/programa_pe">Ir a Programa_pe</a>
-        </div>
+                    <button class="quick-button" @onclick="IrPrograma">
+                        📘 Programa
+                    </button>
 
-        <div class="info-card">
-            <div class="icon">🧠</div>
-            <h4>Programa_ac</h4>
-            <p>Gestiona la relación entre programas y áreas de conocimiento.</p>
-            <a href="/programa_ac">Ir a Programa_ac</a>
-        </div>
+                    <button class="quick-button dark" @onclick="IrGestionUsuarios">
+                        👥 Gestión de usuarios
+                    </button>
+                }
 
-        <div class="info-card">
-            <div class="icon">🧳</div>
-            <h4>Pasantía</h4>
-            <p>Administra la información de las pasantías.</p>
-            <a href="/pasantia">Ir a Pasantía</a>
-        </div>
+                @if (rol == "Docente")
+                {
+                    <button class="quick-button" @onclick="IrUniversidad">
+                        🏛️ Universidad
+                    </button>
 
-        <div class="info-card">
-            <div class="icon">📝</div>
-            <h4>An_programa</h4>
-            <p>Administra los aspectos normativos asociados a programas.</p>
-            <a href="/anprograma">Ir a An_programa</a>
-        </div>
+                    <button class="quick-button" @onclick="IrFacultad">
+                        🎓 Facultad
+                    </button>
 
-        <div class="info-card">
-            <div class="icon">👨‍🏫</div>
-            <h4>Docente Departamento</h4>
-            <p>Relaciona los docentes con sus departamentos.</p>
-            <a href="/docentedepartamento">Ir a Docente Departamento</a>
-        </div>
+                    <button class="quick-button" @onclick="IrPrograma">
+                        📘 Programa
+                    </button>
+                }
 
-        <div class="info-card">
-            <div class="icon">🔗</div>
-            <h4>Alianza</h4>
-            <p>Gestiona la información de las alianzas institucionales.</p>
-            <a href="/alianza">Ir a Alianza</a>
-        </div>
+                @if (rol == "Consultor")
+                {
+                    <button class="quick-button" @onclick="IrUniversidad">
+                        👁️ Ver universidades
+                    </button>
 
-        <div class="info-card">
-            <div class="icon">🧪</div>
-            <h4>Programa_ci</h4>
-            <p>Gestiona la relación entre programas y características de innovación.</p>
-            <a href="/programa_ci">Ir a Programa_ci</a>
-        </div>
+                    <button class="quick-button" @onclick="IrFacultad">
+                        👁️ Ver facultades
+                    </button>
 
-        <div class="info-card">
-            <div class="icon">🏛️</div>
-            <h4>Actividad Académica</h4>
-            <p>Administra las actividades académicas del sistema.</p>
-            <a href="/activacademica">Ir a Actividad Académica</a>
-        </div>
+                    <button class="quick-button" @onclick="IrPrograma">
+                        👁️ Ver programas
+                    </button>
+                }
+            </div>
+        </section>
 
-        <div class="info-card">
-            <div class="icon">🏆</div>
-            <h4>Premio</h4>
-            <p>Gestiona la información de los premios del sistema.</p>
-            <a href="/premio">Ir a Premio</a>
-        </div>
-
-        <div class="info-card">
-            <div class="icon">✅</div>
-            <h4>Registro Calificado</h4>
-            <p>Administra los registros calificados asociados al sistema.</p>
-            <a href="/registrocalificado">Ir a Registro Calificado</a>
-        </div>
-
-        <div class="info-card">
-            <div class="icon">📖</div>
-            <h4>Programa</h4>
-            <p>Administra la información de los programas académicos.</p>
-            <a href="/programa">Ir a Programa</a>
-        </div>
-
-        <div class="info-card">
-            <div class="icon">📚</div>
-            <h4>Área de Conocimiento</h4>
-            <p>Gestiona las áreas de conocimiento asociadas a los programas.</p>
-            <a href="/areaconocimiento">Ir a Área de Conocimiento</a>
-        </div>
-    </section>
+        <button class="btn btn-danger logout-button" @onclick="CerrarSesion">
+            Cerrar sesión
+        </button>
+    }
 </div>
 
-<style>
-    .home-container {
-        padding: 2rem;
-        background: linear-gradient(180deg, #f7f9fc 0%, #eef3f9 100%);
-        min-height: 100vh;
-    }
+@code {
+    private string nombre = "";
+    private string rol = "";
+    private bool cargado = false;
 
-    .hero {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 2rem;
-        align-items: center;
-        margin-bottom: 2.5rem;
-        background: white;
-        border-radius: 24px;
-        padding: 2.5rem;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-    }
+    private string ClaseRol =>
+        rol == "Administrador" ? "admin-role" :
+        rol == "Docente" ? "docente-role" :
+        rol == "Consultor" ? "consultor-role" :
+        "";
 
-    .hero-content h1 {
-        font-size: 2.8rem;
-        font-weight: 800;
-        color: #1b2a4a;
-        margin-bottom: 1rem;
-    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            nombre = await JS.InvokeAsync<string>("localStorage.getItem", "nombre") ?? "";
+            rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol") ?? "";
 
-    .hero-content p {
-        font-size: 1.1rem;
-        color: #5b6475;
-        max-width: 650px;
-        line-height: 1.7;
-        margin-bottom: 1.5rem;
-    }
+            cargado = true;
 
-    .hero-buttons {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .btn-primary,
-    .btn-secondary {
-        text-decoration: none;
-        padding: 0.9rem 1.4rem;
-        border-radius: 12px;
-        font-weight: 600;
-        transition: 0.3s ease;
-    }
-
-    .btn-primary {
-        background: #1f4aa8;
-        color: white;
-    }
-
-    .btn-primary:hover {
-        background: #163a86;
-    }
-
-    .btn-secondary {
-        background: #e9eefb;
-        color: #1f4aa8;
-    }
-
-    .btn-secondary:hover {
-        background: #dce5fb;
-    }
-
-    .hero-card {
-        background: linear-gradient(135deg, #1f4aa8, #304f9e);
-        color: white;
-        border-radius: 20px;
-        padding: 1.8rem;
-        box-shadow: 0 8px 20px rgba(31, 74, 168, 0.25);
-    }
-
-    .hero-card h3 {
-        margin-bottom: 1rem;
-        font-size: 1.3rem;
-    }
-
-    .hero-card ul {
-        padding-left: 1.2rem;
-        margin: 0;
-        columns: 2;
-        column-gap: 1.5rem;
-    }
-
-    .hero-card li {
-        margin-bottom: 0.6rem;
-        break-inside: avoid;
-    }
-
-    .cards-section {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 1.2rem;
-    }
-
-    .info-card {
-        background: white;
-        border-radius: 18px;
-        padding: 1.4rem;
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.07);
-        transition: transform 0.25s ease, box-shadow 0.25s ease;
-    }
-
-    .info-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    }
-
-    .icon {
-        font-size: 2rem;
-        margin-bottom: 0.8rem;
-    }
-
-    .info-card h4 {
-        color: #1b2a4a;
-        margin-bottom: 0.5rem;
-    }
-
-    .info-card p {
-        color: #5b6475;
-        font-size: 0.95rem;
-        min-height: 65px;
-    }
-
-    .info-card a {
-        display: inline-block;
-        margin-top: 0.8rem;
-        text-decoration: none;
-        color: #1f4aa8;
-        font-weight: 600;
-    }
-
-    .info-card a:hover {
-        text-decoration: underline;
-    }
-
-    @@media (max-width: 900px) {
-        .hero {
-            grid-template-columns: 1fr;
-        }
-
-        .hero-content h1 {
-            font-size: 2.1rem;
-        }
-
-        .hero-card ul {
-            columns: 1;
+            StateHasChanged();
         }
     }
-</style>
+
+    private void IrLogin()
+    {
+        Nav.NavigateTo("/login");
+    }
+
+    private void IrRegistro()
+    {
+        Nav.NavigateTo("/registro");
+    }
+
+    private void IrUniversidad()
+    {
+        Nav.NavigateTo("/universidad");
+    }
+
+    private void IrFacultad()
+    {
+        Nav.NavigateTo("/facultad");
+    }
+
+    private void IrPrograma()
+    {
+        Nav.NavigateTo("/programa");
+    }
+
+    private void IrGestionUsuarios()
+    {
+        Nav.NavigateTo("/gestion-usuarios");
+    }
+
+    private async Task CerrarSesion()
+    {
+        await JS.InvokeVoidAsync("localStorage.removeItem", "idUsuario");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "nombre");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "correo");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "rol");
+
+        nombre = "";
+        rol = "";
+
+        Nav.NavigateTo("/", forceLoad: true);
+    }
+}

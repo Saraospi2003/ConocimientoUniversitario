@@ -1,38 +1,63 @@
 ﻿@page "/aliado"
-@rendermode Microsoft.AspNetCore.Components.Web.RenderMode.InteractiveServer
+@rendermode InteractiveServer
+@inject IJSRuntime JS
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD Aliado</h3>
+<div class="crud-header">
+    <div>
+        <span>Módulo de relacionamiento</span>
+        <h2>Gestión de Aliados</h2>
+        <p>Administra la información de aliados institucionales, contactos, correos, teléfonos y ciudades.</p>
+    </div>
 
+    @if (!string.IsNullOrWhiteSpace(rol))
+    {
+        <strong class="role-pill">@rol</strong>
+    }
+</div>
 <div class="mb-3">
     <label>NIT</label>
     <input class="form-control" @bind="nit" />
 </div>
+
 <div class="mb-3">
     <label>Razón Social</label>
     <input class="form-control" @bind="razonSocial" />
 </div>
+
 <div class="mb-3">
     <label>Nombre Contacto</label>
     <input class="form-control" @bind="nombreContacto" />
 </div>
+
 <div class="mb-3">
     <label>Correo</label>
     <input class="form-control" @bind="correo" />
 </div>
+
 <div class="mb-3">
     <label>Teléfono</label>
     <input class="form-control" @bind="telefono" />
 </div>
+
 <div class="mb-3">
     <label>Ciudad</label>
     <input class="form-control" @bind="ciudad" />
 </div>
 
 <div class="mb-3">
-    <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
-    <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
-    <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    @if (rol == "Administrador" || rol == "Docente")
+    {
+        <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
+        <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
+        <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    }
+    else if (rol == "Consultor")
+    {
+        <div class="alert alert-warning">
+            Estás ingresando como Consultor. Solo puedes visualizar la información.
+        </div>
+    }
 </div>
 
 @if (!string.IsNullOrWhiteSpace(mensaje))
@@ -41,6 +66,7 @@
 }
 
 <h4>Listado de aliados</h4>
+
 <table class="table table-bordered">
     <thead>
         <tr>
@@ -53,10 +79,12 @@
             <th>Acciones</th>
         </tr>
     </thead>
+
     <tbody>
         @foreach (var item in aliados)
         {
             var nitEliminar = item["nit"]?.ToString() ?? "";
+
             <tr>
                 <td>@item["nit"]</td>
                 <td>@item["razonSocial"]</td>
@@ -65,8 +93,24 @@
                 <td>@item["telefono"]</td>
                 <td>@item["ciudad"]</td>
                 <td>
-                    <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(nitEliminar)">Eliminar</button>
+                    @if (rol == "Administrador" || rol == "Docente")
+                    {
+                        <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">
+                            Editar
+                        </button>
+                    }
+
+                    @if (rol == "Administrador")
+                    {
+                        <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(nitEliminar)">
+                            Eliminar
+                        </button>
+                    }
+
+                    @if (rol == "Consultor")
+                    {
+                        <span class="text-muted">Solo lectura</span>
+                    }
                 </td>
             </tr>
         }
@@ -74,6 +118,7 @@
 </table>
 
 @code {
+    private string rol = "";
     private List<Dictionary<string, object?>> aliados = new();
 
     private string nit = "";
@@ -89,6 +134,15 @@
         await CargarDatos();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol") ?? "";
+            StateHasChanged();
+        }
+    }
+
     private async Task CargarDatos()
     {
         aliados = await Api.ListarAsync("Aliado");
@@ -96,6 +150,12 @@
 
     private async Task Guardar()
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para guardar información. Tu rol es Consultor.";
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(nit) ||
             string.IsNullOrWhiteSpace(razonSocial) ||
             string.IsNullOrWhiteSpace(nombreContacto) ||
@@ -129,6 +189,12 @@
 
     private async Task Actualizar()
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para actualizar información. Tu rol es Consultor.";
+            return;
+        }
+
         var datos = new Dictionary<string, object?>
         {
             { "nit", nit },
@@ -151,6 +217,12 @@
 
     private async Task Eliminar(string nitEliminar)
     {
+        if (rol != "Administrador")
+        {
+            mensaje = "Solo el Administrador puede eliminar registros.";
+            return;
+        }
+
         var resultado = await Api.EliminarAsync("Aliado", "nit", nitEliminar);
         mensaje = resultado.mensaje;
         await CargarDatos();
@@ -158,12 +230,19 @@
 
     private void Seleccionar(Dictionary<string, object?> item)
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para editar. Tu rol es Consultor.";
+            return;
+        }
+
         nit = item["nit"]?.ToString() ?? "";
         razonSocial = item["razonSocial"]?.ToString() ?? "";
         nombreContacto = item["nombreContacto"]?.ToString() ?? "";
         correo = item["correo"]?.ToString() ?? "";
         telefono = item["telefono"]?.ToString() ?? "";
         ciudad = item["ciudad"]?.ToString() ?? "";
+        mensaje = "Registro cargado para edición.";
     }
 
     private void Limpiar()

@@ -1,24 +1,76 @@
 ﻿@page "/registrocalificado"
 @rendermode InteractiveServer
+@inject IJSRuntime JS
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD Registro Calificado</h3>
+<div class="crud-header">
+    <div>
+        <span>Módulo de calidad académica</span>
+        <h2>Gestión de Registros Calificados</h2>
+        <p>Administra códigos, créditos, metodologías, fechas, duración, titulación y programas asociados.</p>
+    </div>
 
-<div class="mb-3"><label>Código</label><input class="form-control" @bind="codigo" /></div>
-<div class="mb-3"><label>Cant. créditos</label><input class="form-control" @bind="cantCred" /></div>
-<div class="mb-3"><label>Hora acompañamiento</label><input class="form-control" @bind="horaAcom" /></div>
-<div class="mb-3"><label>Hora independiente</label><input class="form-control" @bind="horaInd" /></div>
-<div class="mb-3"><label>Metodología</label><input class="form-control" @bind="metodologia" /></div>
-<div class="mb-3"><label>Fecha inicio</label><input type="date" class="form-control" @bind="fechaInicio" /></div>
-<div class="mb-3"><label>Fecha fin</label><input type="date" class="form-control" @bind="fechaFin" /></div>
-<div class="mb-3"><label>Duración años</label><input class="form-control" @bind="duracionAnios" /></div>
-<div class="mb-3"><label>Duración semestres</label><input class="form-control" @bind="duracionSemes" /></div>
-<div class="mb-3"><label>Tipo titulación</label><input class="form-control" @bind="tipoTitulacion" /></div>
+    @if (!string.IsNullOrWhiteSpace(rol))
+    {
+        <strong class="role-pill">@rol</strong>
+    }
+</div>
+
+<div class="mb-3">
+    <label>Código</label>
+    <input class="form-control" @bind="codigo" />
+</div>
+
+<div class="mb-3">
+    <label>Cantidad créditos</label>
+    <input class="form-control" @bind="cantCred" />
+</div>
+
+<div class="mb-3">
+    <label>Horas acompañamiento</label>
+    <input class="form-control" @bind="horaAcom" />
+</div>
+
+<div class="mb-3">
+    <label>Horas independientes</label>
+    <input class="form-control" @bind="horaInd" />
+</div>
+
+<div class="mb-3">
+    <label>Metodología</label>
+    <input class="form-control" @bind="metodologia" />
+</div>
+
+<div class="mb-3">
+    <label>Fecha inicio</label>
+    <input type="date" class="form-control" @bind="fechaInicio" />
+</div>
+
+<div class="mb-3">
+    <label>Fecha fin</label>
+    <input type="date" class="form-control" @bind="fechaFin" />
+</div>
+
+<div class="mb-3">
+    <label>Duración años</label>
+    <input class="form-control" @bind="duracionAnios" />
+</div>
+
+<div class="mb-3">
+    <label>Duración semestres</label>
+    <input class="form-control" @bind="duracionSemes" />
+</div>
+
+<div class="mb-3">
+    <label>Tipo titulación</label>
+    <input class="form-control" @bind="tipoTitulacion" />
+</div>
 
 <div class="mb-3">
     <label>Programa</label>
     <select class="form-control" @bind="programa">
         <option value="">Seleccione un programa</option>
+
         @foreach (var pro in programasLista)
         {
             <option value="@pro["id"]">@pro["nombre"]</option>
@@ -27,9 +79,26 @@
 </div>
 
 <div class="mb-3">
-    <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
-    <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
-    <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    @if (rol == "Administrador" || rol == "Docente")
+    {
+        <button class="btn btn-primary me-2" @onclick="Guardar">
+            Guardar
+        </button>
+
+        <button class="btn btn-warning me-2" @onclick="Actualizar">
+            Actualizar
+        </button>
+
+        <button class="btn btn-secondary" @onclick="Limpiar">
+            Limpiar
+        </button>
+    }
+    else if (rol == "Consultor")
+    {
+        <div class="alert alert-warning">
+            Estás ingresando como Consultor. Solo puedes visualizar la información.
+        </div>
+    }
 </div>
 
 @if (!string.IsNullOrWhiteSpace(mensaje))
@@ -38,21 +107,49 @@
 }
 
 <h4>Listado de registros calificados</h4>
+
 <table class="table table-bordered">
     <thead>
-        <tr><th>Código</th><th>Metodología</th><th>Programa</th><th>Acciones</th></tr>
+        <tr>
+            <th>Código</th>
+            <th>Metodología</th>
+            <th>Fecha inicio</th>
+            <th>Fecha fin</th>
+            <th>Programa</th>
+            <th>Acciones</th>
+        </tr>
     </thead>
+
     <tbody>
         @foreach (var item in registros)
         {
-            var idEliminar = item["codigo"]?.ToString() ?? "";
+            var codigoEliminar = item["codigo"]?.ToString() ?? "";
+
             <tr>
                 <td>@item["codigo"]</td>
                 <td>@item["metodologia"]</td>
+                <td>@item["fechaInicio"]</td>
+                <td>@item["fechaFin"]</td>
                 <td>@item["programa"]</td>
                 <td>
-                    <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
+                    @if (rol == "Administrador" || rol == "Docente")
+                    {
+                        <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">
+                            Editar
+                        </button>
+                    }
+
+                    @if (rol == "Administrador")
+                    {
+                        <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(codigoEliminar)">
+                            Eliminar
+                        </button>
+                    }
+
+                    @if (rol == "Consultor")
+                    {
+                        <span class="text-muted">Solo lectura</span>
+                    }
                 </td>
             </tr>
         }
@@ -60,11 +157,22 @@
 </table>
 
 @code {
+    private string rol = "";
+
     private List<Dictionary<string, object?>> registros = new();
     private List<Dictionary<string, object?>> programasLista = new();
 
-    private string codigo = "", cantCred = "", horaAcom = "", horaInd = "", metodologia = "",
-                   duracionAnios = "", duracionSemes = "", tipoTitulacion = "", programa = "", mensaje = "";
+    private string codigo = "";
+    private string cantCred = "";
+    private string horaAcom = "";
+    private string horaInd = "";
+    private string metodologia = "";
+    private string duracionAnios = "";
+    private string duracionSemes = "";
+    private string tipoTitulacion = "";
+    private string programa = "";
+    private string mensaje = "";
+
     private DateTime? fechaInicio;
     private DateTime? fechaFin;
 
@@ -74,48 +182,135 @@
         await CargarProgramas();
     }
 
-    private async Task CargarDatos() => registros = await Api.ListarAsync("RegistroCalificado");
-    private async Task CargarProgramas() => programasLista = await Api.ListarAsync("Programa");
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol") ?? "";
+            StateHasChanged();
+        }
+    }
+
+    private async Task CargarDatos()
+    {
+        registros = await Api.ListarAsync("RegistroCalificado");
+    }
+
+    private async Task CargarProgramas()
+    {
+        programasLista = await Api.ListarAsync("Programa");
+    }
 
     private async Task Guardar()
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para guardar información. Tu rol es Consultor.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(codigo) ||
+            string.IsNullOrWhiteSpace(cantCred) ||
+            string.IsNullOrWhiteSpace(horaAcom) ||
+            string.IsNullOrWhiteSpace(horaInd) ||
+            string.IsNullOrWhiteSpace(metodologia) ||
+            fechaInicio == null ||
+            fechaFin == null ||
+            string.IsNullOrWhiteSpace(duracionAnios) ||
+            string.IsNullOrWhiteSpace(duracionSemes) ||
+            string.IsNullOrWhiteSpace(tipoTitulacion) ||
+            string.IsNullOrWhiteSpace(programa))
+        {
+            mensaje = "Completa todos los campos.";
+            return;
+        }
+
         var datos = new Dictionary<string, object?>
         {
-            { "codigo", codigo }, { "cantCred", cantCred }, { "horaAcom", horaAcom }, { "horaInd", horaInd },
-            { "metodologia", metodologia }, { "fechaInicio", fechaInicio?.ToString("yyyy-MM-dd") },
-            { "fechaFin", fechaFin?.ToString("yyyy-MM-dd") }, { "duracionAnios", duracionAnios },
-            { "duracionSemes", duracionSemes }, { "tipoTitulacion", tipoTitulacion }, { "programa", programa }
+            { "codigo", codigo },
+            { "cantCred", cantCred },
+            { "horaAcom", horaAcom },
+            { "horaInd", horaInd },
+            { "metodologia", metodologia },
+            { "fechaInicio", fechaInicio?.ToString("yyyy-MM-dd") },
+            { "fechaFin", fechaFin?.ToString("yyyy-MM-dd") },
+            { "duracionAnios", duracionAnios },
+            { "duracionSemes", duracionSemes },
+            { "tipoTitulacion", tipoTitulacion },
+            { "programa", programa }
         };
 
         var resultado = await Api.CrearAsync("RegistroCalificado", datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
     }
 
     private async Task Actualizar()
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para actualizar información. Tu rol es Consultor.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(codigo))
+        {
+            mensaje = "Selecciona un registro para actualizar.";
+            return;
+        }
+
         var datos = new Dictionary<string, object?>
         {
-            { "codigo", codigo }, { "cantCred", cantCred }, { "horaAcom", horaAcom }, { "horaInd", horaInd },
-            { "metodologia", metodologia }, { "fechaInicio", fechaInicio?.ToString("yyyy-MM-dd") },
-            { "fechaFin", fechaFin?.ToString("yyyy-MM-dd") }, { "duracionAnios", duracionAnios },
-            { "duracionSemes", duracionSemes }, { "tipoTitulacion", tipoTitulacion }, { "programa", programa }
+            { "codigo", codigo },
+            { "cantCred", cantCred },
+            { "horaAcom", horaAcom },
+            { "horaInd", horaInd },
+            { "metodologia", metodologia },
+            { "fechaInicio", fechaInicio?.ToString("yyyy-MM-dd") },
+            { "fechaFin", fechaFin?.ToString("yyyy-MM-dd") },
+            { "duracionAnios", duracionAnios },
+            { "duracionSemes", duracionSemes },
+            { "tipoTitulacion", tipoTitulacion },
+            { "programa", programa }
         };
 
         var resultado = await Api.ActualizarAsync("RegistroCalificado", "codigo", codigo, datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
     }
 
-    private async Task Eliminar(string idEliminar)
+    private async Task Eliminar(string codigoEliminar)
     {
-        var resultado = await Api.EliminarAsync("RegistroCalificado", "codigo", idEliminar);
+        if (rol != "Administrador")
+        {
+            mensaje = "Solo el Administrador puede eliminar registros.";
+            return;
+        }
+
+        var resultado = await Api.EliminarAsync("RegistroCalificado", "codigo", codigoEliminar);
         mensaje = resultado.mensaje;
+
         await CargarDatos();
     }
 
     private void Seleccionar(Dictionary<string, object?> item)
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para editar. Tu rol es Consultor.";
+            return;
+        }
+
         codigo = item["codigo"]?.ToString() ?? "";
         cantCred = item["cantCred"]?.ToString() ?? "";
         horaAcom = item["horaAcom"]?.ToString() ?? "";
@@ -126,22 +321,25 @@
         tipoTitulacion = item["tipoTitulacion"]?.ToString() ?? "";
         programa = item["programa"]?.ToString() ?? "";
 
-        if (DateTime.TryParse(item["fechaInicio"]?.ToString(), out var fi))
-            fechaInicio = fi;
-        else
-            fechaInicio = null;
+        fechaInicio = DateTime.TryParse(item["fechaInicio"]?.ToString(), out var fi) ? fi : null;
+        fechaFin = DateTime.TryParse(item["fechaFin"]?.ToString(), out var ff) ? ff : null;
 
-        if (DateTime.TryParse(item["fechaFin"]?.ToString(), out var ff))
-            fechaFin = ff;
-        else
-            fechaFin = null;
+        mensaje = "Registro cargado para edición.";
     }
 
     private void Limpiar()
     {
-        codigo = cantCred = horaAcom = horaInd = metodologia = "";
-        duracionAnios = duracionSemes = tipoTitulacion = programa = mensaje = "";
+        codigo = "";
+        cantCred = "";
+        horaAcom = "";
+        horaInd = "";
+        metodologia = "";
+        duracionAnios = "";
+        duracionSemes = "";
+        tipoTitulacion = "";
+        programa = "";
         fechaInicio = null;
         fechaFin = null;
+        mensaje = "";
     }
 }

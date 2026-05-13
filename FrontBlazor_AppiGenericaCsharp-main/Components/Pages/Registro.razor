@@ -1,0 +1,92 @@
+@page "/registro"
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Nav
+
+<h3>Registro de usuario</h3>
+
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h2>Crear cuenta</h2>
+            <p>Regístrate y selecciona el rol con el que ingresarás al sistema.</p>
+        </div>
+
+        <div class="mb-3">
+            <label>Nombre</label>
+            <input class="form-control" @bind="usuario.Nombre" placeholder="Ej: Sara Ospina" />
+        </div>
+
+        <div class="mb-3">
+            <label>Correo</label>
+            <input class="form-control" @bind="usuario.Correo" placeholder="Ej: correo@gmail.com" />
+        </div>
+
+        <div class="mb-3">
+            <label>Contraseña</label>
+            <input type="password" class="form-control" @bind="usuario.Password" placeholder="Ingresa tu contraseña" />
+        </div>
+
+        <div class="mb-3">
+            <label>Rol</label>
+            <select class="form-control" @bind="usuario.Rol">
+                <option value="">Seleccione un rol</option>
+                <option value="Administrador">Administrador</option>
+                <option value="Docente">Docente</option>
+                <option value="Consultor">Consultor</option>
+            </select>
+        </div>
+
+        <div class="roles-info">
+            <div><strong>Administrador:</strong> acceso completo.</div>
+            <div><strong>Docente:</strong> puede crear y editar.</div>
+            <div><strong>Consultor:</strong> solo visualiza.</div>
+        </div>
+
+        <button class="btn btn-primary w-100 mt-3" @onclick="Registrar">
+            Registrarse
+        </button>
+
+        @if (!string.IsNullOrWhiteSpace(mensaje))
+        {
+            <div class="alert alert-info mt-3">
+                @mensaje
+            </div>
+        }
+    </div>
+</div>
+@code {
+    RegistroDto usuario = new();
+    string mensaje = "";
+
+    async Task Registrar()
+    {
+        try
+        {
+            var respuesta = await Http.PostAsJsonAsync("api/Auth/registro", usuario);
+
+            if (respuesta.IsSuccessStatusCode)
+            {
+                mensaje = "Usuario registrado correctamente";
+                Nav.NavigateTo("/login");
+            }
+            else
+            {
+                var error = await respuesta.Content.ReadAsStringAsync();
+                mensaje = "Error al registrar: " + error;
+            }
+        }
+        catch (Exception ex)
+        {
+            mensaje = "Error de conexión: " + ex.Message;
+        }
+    }
+
+    public class RegistroDto
+    {
+        public string Nombre { get; set; } = "";
+        public string Correo { get; set; } = "";
+        public string Password { get; set; } = "";
+        public string Rol { get; set; } = "";
+    }
+}

@@ -1,8 +1,20 @@
 @page "/programa"
 @rendermode InteractiveServer
+@inject IJSRuntime JS
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD Programa</h3>
+<div class="crud-header">
+    <div>
+        <span>Módulo académico</span>
+        <h2>Gestión de Programas Académicos</h2>
+        <p>Administra programas, niveles, fechas, cohortes, graduados, ciudades y facultades asociadas.</p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(rol))
+    {
+        <strong class="role-pill">@rol</strong>
+    }
+</div>
 
 <div class="mb-3">
     <label>ID</label>
@@ -26,12 +38,12 @@
 
 <div class="mb-3">
     <label>Fecha creación</label>
-    <input class="form-control" @bind="fechaCreacion" />
+    <input type="date" class="form-control" @bind="fechaCreacion" />
 </div>
 
 <div class="mb-3">
     <label>Fecha cierre</label>
-    <input class="form-control" @bind="fechaCierre" />
+    <input type="date" class="form-control" @bind="fechaCierre" />
 </div>
 
 <div class="mb-3">
@@ -46,7 +58,7 @@
 
 <div class="mb-3">
     <label>Fecha actualización</label>
-    <input class="form-control" @bind="fechaActualizacion" />
+    <input type="date" class="form-control" @bind="fechaActualizacion" />
 </div>
 
 <div class="mb-3">
@@ -54,18 +66,39 @@
     <input class="form-control" @bind="ciudad" />
 </div>
 
-<select class="form-control" @bind="facultad">
-    <option value="">Seleccione una facultad</option>
-    @foreach (var fac in facultadesLista)
-    {
-        <option value="@fac["id"]">@fac["nombre"]</option>
-    }
-</select>
+<div class="mb-3">
+    <label>Facultad</label>
+    <select class="form-control" @bind="facultadId">
+        <option value="">Seleccione una facultad</option>
+
+        @foreach (var fac in facultadesLista)
+        {
+            <option value="@fac["id"]">@fac["nombre"]</option>
+        }
+    </select>
+</div>
 
 <div class="mb-3">
-    <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
-    <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
-    <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    @if (rol == "Administrador" || rol == "Docente")
+    {
+        <button class="btn btn-primary me-2" @onclick="Guardar">
+            Guardar
+        </button>
+
+        <button class="btn btn-warning me-2" @onclick="Actualizar">
+            Actualizar
+        </button>
+
+        <button class="btn btn-secondary" @onclick="Limpiar">
+            Limpiar
+        </button>
+    }
+    else if (rol == "Consultor")
+    {
+        <div class="alert alert-warning">
+            Estás ingresando como Consultor. Solo puedes visualizar la información.
+        </div>
+    }
 </div>
 
 @if (!string.IsNullOrWhiteSpace(mensaje))
@@ -74,6 +107,7 @@
 }
 
 <h4>Listado de programas</h4>
+
 <table class="table table-bordered">
     <thead>
         <tr>
@@ -86,10 +120,12 @@
             <th>Acciones</th>
         </tr>
     </thead>
+
     <tbody>
         @foreach (var item in programas)
         {
             var idEliminar = item["id"]?.ToString() ?? "";
+
             <tr>
                 <td>@item["id"]</td>
                 <td>@item["nombre"]</td>
@@ -98,8 +134,24 @@
                 <td>@item["ciudad"]</td>
                 <td>@item["facultad"]</td>
                 <td>
-                    <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
+                    @if (rol == "Administrador" || rol == "Docente")
+                    {
+                        <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">
+                            Editar
+                        </button>
+                    }
+
+                    @if (rol == "Administrador")
+                    {
+                        <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">
+                            Eliminar
+                        </button>
+                    }
+
+                    @if (rol == "Consultor")
+                    {
+                        <span class="text-muted">Solo lectura</span>
+                    }
                 </td>
             </tr>
         }
@@ -108,38 +160,73 @@
 
 @code {
     private List<Dictionary<string, object?>> programas = new();
-    private string id = "", nombre = "", tipo = "", nivel = "", fechaCreacion = "", fechaCierre = "",
-                   numCohortes = "", cantGraduados = "", fechaActualizacion = "", ciudad = "", facultad = "", mensaje = "";
-
     private List<Dictionary<string, object?>> facultadesLista = new();
 
-    private async Task CargarFacultades()
-    => facultadesLista = await Api.ListarAsync("Facultad");
+    private string rol = "";
+    private bool cargadoRol = false;
+
+    private int? id;
+    private string nombre = "";
+    private string tipo = "";
+    private string nivel = "";
+    private string ciudad = "";
+    private string mensaje = "";
+
+    private DateTime? fechaCreacion;
+    private DateTime? fechaCierre;
+    private DateTime? fechaActualizacion;
+
+    private int? numCohortes;
+    private int? cantGraduados;
+    private int? facultadId;
+
     protected override async Task OnInitializedAsync()
-{
-    await CargarDatos();
-    await CargarFacultades();
-}
+    {
+        await CargarDatos();
+        await CargarFacultades();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol") ?? "";
+            cargadoRol = true;
+            StateHasChanged();
+        }
+    }
 
     private async Task CargarDatos()
-        => programas = await Api.ListarAsync("Programa");
+    {
+        programas = await Api.ListarAsync("Programa");
+    }
+
+    private async Task CargarFacultades()
+    {
+        facultadesLista = await Api.ListarAsync("Facultad");
+    }
 
     private async Task Guardar()
     {
-        if (string.IsNullOrWhiteSpace(id) ||
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para guardar información. Tu rol es Consultor.";
+            return;
+        }
+
+        if (id == null ||
             string.IsNullOrWhiteSpace(nombre) ||
             string.IsNullOrWhiteSpace(tipo) ||
             string.IsNullOrWhiteSpace(nivel) ||
-            string.IsNullOrWhiteSpace(fechaCreacion) ||
-            string.IsNullOrWhiteSpace(fechaCierre) ||
-            string.IsNullOrWhiteSpace(numCohortes) ||
-            string.IsNullOrWhiteSpace(cantGraduados) ||
-            string.IsNullOrWhiteSpace(fechaActualizacion) ||
+            fechaCreacion == null ||
+            fechaCierre == null ||
+            numCohortes == null ||
+            cantGraduados == null ||
+            fechaActualizacion == null ||
             string.IsNullOrWhiteSpace(ciudad) ||
-            string.IsNullOrWhiteSpace(facultad))
+            facultadId == null)
         {
             mensaje = "Completa todos los campos.";
-            StateHasChanged();
             return;
         }
 
@@ -155,7 +242,7 @@
             { "cantGraduados", cantGraduados },
             { "fechaActualizacion", fechaActualizacion },
             { "ciudad", ciudad },
-            { "facultad", facultad }
+            { "facultad", facultadId }
         };
 
         var resultado = await Api.CrearAsync("Programa", datos);
@@ -170,20 +257,15 @@
 
     private async Task Actualizar()
     {
-        if (string.IsNullOrWhiteSpace(id) ||
-            string.IsNullOrWhiteSpace(nombre) ||
-            string.IsNullOrWhiteSpace(tipo) ||
-            string.IsNullOrWhiteSpace(nivel) ||
-            string.IsNullOrWhiteSpace(fechaCreacion) ||
-            string.IsNullOrWhiteSpace(fechaCierre) ||
-            string.IsNullOrWhiteSpace(numCohortes) ||
-            string.IsNullOrWhiteSpace(cantGraduados) ||
-            string.IsNullOrWhiteSpace(fechaActualizacion) ||
-            string.IsNullOrWhiteSpace(ciudad) ||
-            string.IsNullOrWhiteSpace(facultad))
+        if (rol == "Consultor")
         {
-            mensaje = "Completa todos los campos.";
-            StateHasChanged();
+            mensaje = "No tienes permiso para actualizar información. Tu rol es Consultor.";
+            return;
+        }
+
+        if (id == null)
+        {
+            mensaje = "Selecciona un registro para actualizar.";
             return;
         }
 
@@ -199,10 +281,10 @@
             { "cantGraduados", cantGraduados },
             { "fechaActualizacion", fechaActualizacion },
             { "ciudad", ciudad },
-            { "facultad", facultad }
+            { "facultad", facultadId }
         };
 
-        var resultado = await Api.ActualizarAsync("Programa", "id", id, datos);
+        var resultado = await Api.ActualizarAsync("Programa", "id", id?.ToString() ?? "", datos);
         mensaje = resultado.mensaje;
 
         if (resultado.exito)
@@ -214,6 +296,12 @@
 
     private async Task Eliminar(string idEliminar)
     {
+        if (rol != "Administrador")
+        {
+            mensaje = "Solo el Administrador puede eliminar registros.";
+            return;
+        }
+
         var resultado = await Api.EliminarAsync("Programa", "id", idEliminar);
         mensaje = resultado.mensaje;
         await CargarDatos();
@@ -221,33 +309,43 @@
 
     private void Seleccionar(Dictionary<string, object?> item)
     {
-        id = item["id"]?.ToString() ?? "";
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para editar. Tu rol es Consultor.";
+            return;
+        }
+
+        id = int.TryParse(item["id"]?.ToString(), out var i) ? i : null;
         nombre = item["nombre"]?.ToString() ?? "";
         tipo = item["tipo"]?.ToString() ?? "";
         nivel = item["nivel"]?.ToString() ?? "";
-        fechaCreacion = item["fechaCreacion"]?.ToString() ?? "";
-        fechaCierre = item["fechaCierre"]?.ToString() ?? "";
-        numCohortes = item["numCohortes"]?.ToString() ?? "";
-        cantGraduados = item["cantGraduados"]?.ToString() ?? "";
-        fechaActualizacion = item["fechaActualizacion"]?.ToString() ?? "";
+
+        fechaCreacion = DateTime.TryParse(item["fechaCreacion"]?.ToString(), out var fc) ? fc : null;
+        fechaCierre = DateTime.TryParse(item["fechaCierre"]?.ToString(), out var ff) ? ff : null;
+        fechaActualizacion = DateTime.TryParse(item["fechaActualizacion"]?.ToString(), out var fa) ? fa : null;
+
+        numCohortes = int.TryParse(item["numCohortes"]?.ToString(), out var nc) ? nc : null;
+        cantGraduados = int.TryParse(item["cantGraduados"]?.ToString(), out var cg) ? cg : null;
+
         ciudad = item["ciudad"]?.ToString() ?? "";
-        facultad = item["facultad"]?.ToString() ?? "";
+        facultadId = int.TryParse(item["facultad"]?.ToString(), out var f) ? f : null;
+
         mensaje = "Registro cargado para edición.";
     }
 
     private void Limpiar()
     {
-        id = "";
+        id = null;
         nombre = "";
         tipo = "";
         nivel = "";
-        fechaCreacion = "";
-        fechaCierre = "";
-        numCohortes = "";
-        cantGraduados = "";
-        fechaActualizacion = "";
+        fechaCreacion = null;
+        fechaCierre = null;
+        numCohortes = null;
+        cantGraduados = null;
+        fechaActualizacion = null;
         ciudad = "";
-        facultad = "";
+        facultadId = null;
         mensaje = "";
     }
 }

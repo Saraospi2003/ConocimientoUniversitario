@@ -1,10 +1,25 @@
 ﻿@page "/docentedepartamento"
 @rendermode InteractiveServer
+@inject IJSRuntime JS
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD Docente Departamento</h3>
+<div class="crud-header">
+    <div>
+        <span>Módulo docente</span>
+        <h2>Gestión de Docentes por Departamento</h2>
+        <p>Administra la relación entre docentes, departamentos, dedicación, modalidad y fechas de vinculación.</p>
+    </div>
 
-<div class="mb-3"><label>Docente</label><input class="form-control" @bind="docente" /></div>
+    @if (!string.IsNullOrWhiteSpace(rol))
+    {
+        <strong class="role-pill">@rol</strong>
+    }
+</div>
+
+<div class="mb-3">
+    <label>Docente</label>
+    <input class="form-control" @bind="docente" />
+</div>
 
 <div class="mb-3">
     <label>Departamento</label>
@@ -17,14 +32,38 @@
     </select>
 </div>
 
-<div class="mb-3"><label>Dedicación</label><input class="form-control" @bind="dedicacion" /></div>
-<div class="mb-3"><label>Modalidad</label><input class="form-control" @bind="modalidad" /></div>
-<div class="mb-3"><label>Fecha ingreso</label><input type="date" class="form-control" @bind="fechaIngreso" /></div>
-<div class="mb-3"><label>Fecha salida</label><input type="date" class="form-control" @bind="fechaSalida" /></div>
+<div class="mb-3">
+    <label>Dedicación</label>
+    <input class="form-control" @bind="dedicacion" />
+</div>
 
 <div class="mb-3">
-    <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
-    <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    <label>Modalidad</label>
+    <input class="form-control" @bind="modalidad" />
+</div>
+
+<div class="mb-3">
+    <label>Fecha ingreso</label>
+    <input type="date" class="form-control" @bind="fechaIngreso" />
+</div>
+
+<div class="mb-3">
+    <label>Fecha salida</label>
+    <input type="date" class="form-control" @bind="fechaSalida" />
+</div>
+
+<div class="mb-3">
+    @if (rol == "Administrador" || rol == "Docente")
+    {
+        <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
+        <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    }
+    else if (rol == "Consultor")
+    {
+        <div class="alert alert-warning">
+            Estás ingresando como Consultor. Solo puedes visualizar la información.
+        </div>
+    }
 </div>
 
 @if (!string.IsNullOrWhiteSpace(mensaje))
@@ -33,10 +72,20 @@
 }
 
 <h4>Listado Docente Departamento</h4>
+
 <table class="table table-bordered">
     <thead>
-        <tr><th>Docente</th><th>Departamento</th><th>Dedicación</th><th>Modalidad</th><th>Fecha ingreso</th><th>Fecha salida</th><th>Acciones</th></tr>
+        <tr>
+            <th>Docente</th>
+            <th>Departamento</th>
+            <th>Dedicación</th>
+            <th>Modalidad</th>
+            <th>Fecha ingreso</th>
+            <th>Fecha salida</th>
+            <th>Acciones</th>
+        </tr>
     </thead>
+
     <tbody>
         @foreach (var item in registros)
         {
@@ -51,7 +100,16 @@
                 <td>@item["fechaIngreso"]</td>
                 <td>@item["fechaSalida"]</td>
                 <td>
-                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(docenteEliminar, depEliminar)">Eliminar</button>
+                    @if (rol == "Administrador")
+                    {
+                        <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(docenteEliminar, depEliminar)">
+                            Eliminar
+                        </button>
+                    }
+                    else
+                    {
+                        <span class="text-muted">Solo lectura</span>
+                    }
                 </td>
             </tr>
         }
@@ -59,10 +117,17 @@
 </table>
 
 @code {
+    private string rol = "";
+
     private List<Dictionary<string, object?>> registros = new();
     private List<Dictionary<string, object?>> facultadesLista = new();
 
-    private string docente = "", departamento = "", dedicacion = "", modalidad = "", mensaje = "";
+    private string docente = "";
+    private string departamento = "";
+    private string dedicacion = "";
+    private string modalidad = "";
+    private string mensaje = "";
+
     private DateTime? fechaIngreso;
     private DateTime? fechaSalida;
 
@@ -72,11 +137,42 @@
         await CargarFacultades();
     }
 
-    private async Task CargarDatos() => registros = await Api.ListarAsync("DocenteDepartamento");
-    private async Task CargarFacultades() => facultadesLista = await Api.ListarAsync("Facultad");
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol") ?? "";
+            StateHasChanged();
+        }
+    }
+
+    private async Task CargarDatos()
+    {
+        registros = await Api.ListarAsync("DocenteDepartamento");
+    }
+
+    private async Task CargarFacultades()
+    {
+        facultadesLista = await Api.ListarAsync("Facultad");
+    }
 
     private async Task Guardar()
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para guardar información. Tu rol es Consultor.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(docente) ||
+            string.IsNullOrWhiteSpace(departamento) ||
+            string.IsNullOrWhiteSpace(dedicacion) ||
+            string.IsNullOrWhiteSpace(modalidad))
+        {
+            mensaje = "Completa los campos obligatorios.";
+            return;
+        }
+
         var datos = new Dictionary<string, object?>
         {
             { "docente", docente },
@@ -99,6 +195,12 @@
 
     private async Task Eliminar(string docenteEliminar, string depEliminar)
     {
+        if (rol != "Administrador")
+        {
+            mensaje = "Solo el Administrador puede eliminar registros.";
+            return;
+        }
+
         var resultado = await Api.EliminarCompuestoAsync("DocenteDepartamento",
             new Dictionary<string, string>
             {

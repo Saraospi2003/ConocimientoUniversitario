@@ -1,30 +1,40 @@
 ﻿@page "/alianza"
 @rendermode InteractiveServer
+@inject IJSRuntime JS
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD Alianza</h3>
+<div class="crud-header">
+    <div>
+        <span>Módulo de alianzas</span>
+        <h2>Gestión de Alianzas</h2>
+        <p>Administra alianzas académicas, departamentos, docentes y fechas de inicio y finalización.</p>
+    </div>
 
-<div class="mb-3"><label>ID</label><input class="form-control" @bind="id" /></div>
-
-<div class="mb-3">
-    <label>Departamento</label>
-    <select class="form-control" @bind="departamento">
-        <option value="">Seleccione una facultad</option>
-        @foreach (var fac in facultadesLista)
-        {
-            <option value="@fac["id"]">@fac["nombre"]</option>
-        }
-    </select>
+    @if (!string.IsNullOrWhiteSpace(rol))
+    {
+        <strong class="role-pill">@rol</strong>
+    }
 </div>
 
-<div class="mb-3"><label>Fecha Inicio</label><input type="date" class="form-control" @bind="fechaInicio" /></div>
-<div class="mb-3"><label>Fecha Fin</label><input type="date" class="form-control" @bind="fechaFin" /></div>
+<div class="mb-3"><label>ID</label><input class="form-control" @bind="id" /></div>
+<div class="mb-3"><label>Departamento</label><input class="form-control" @bind="departamento" /></div>
+<div class="mb-3"><label>Fecha inicio</label><input type="date" class="form-control" @bind="fechaInicio" /></div>
+<div class="mb-3"><label>Fecha fin</label><input type="date" class="form-control" @bind="fechaFin" /></div>
 <div class="mb-3"><label>Docente</label><input class="form-control" @bind="docente" /></div>
 
 <div class="mb-3">
-    <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
-    <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
-    <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    @if (rol == "Administrador" || rol == "Docente")
+    {
+        <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
+        <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
+        <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    }
+    else if (rol == "Consultor")
+    {
+        <div class="alert alert-warning">
+            Estás ingresando como Consultor. Solo puedes visualizar la información.
+        </div>
+    }
 </div>
 
 @if (!string.IsNullOrWhiteSpace(mensaje))
@@ -33,14 +43,24 @@
 }
 
 <h4>Listado de alianzas</h4>
+
 <table class="table table-bordered">
     <thead>
-        <tr><th>ID</th><th>Departamento</th><th>Fecha Inicio</th><th>Fecha Fin</th><th>Docente</th><th>Acciones</th></tr>
+        <tr>
+            <th>ID</th>
+            <th>Departamento</th>
+            <th>Fecha inicio</th>
+            <th>Fecha fin</th>
+            <th>Docente</th>
+            <th>Acciones</th>
+        </tr>
     </thead>
+
     <tbody>
         @foreach (var item in alianzas)
         {
             var idEliminar = item["id"]?.ToString() ?? "";
+
             <tr>
                 <td>@item["id"]</td>
                 <td>@item["departamento"]</td>
@@ -48,8 +68,24 @@
                 <td>@item["fechaFin"]</td>
                 <td>@item["docente"]</td>
                 <td>
-                    <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
+                    @if (rol == "Administrador" || rol == "Docente")
+                    {
+                        <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">
+                            Editar
+                        </button>
+                    }
+
+                    @if (rol == "Administrador")
+                    {
+                        <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">
+                            Eliminar
+                        </button>
+                    }
+
+                    @if (rol == "Consultor")
+                    {
+                        <span class="text-muted">Solo lectura</span>
+                    }
                 </td>
             </tr>
         }
@@ -57,27 +93,48 @@
 </table>
 
 @code {
+    private string rol = "";
     private List<Dictionary<string, object?>> alianzas = new();
-    private List<Dictionary<string, object?>> facultadesLista = new();
 
-    private string id = "", departamento = "", docente = "", mensaje = "";
+    private string id = "";
+    private string departamento = "";
+    private string docente = "";
+    private string mensaje = "";
+
     private DateTime? fechaInicio;
     private DateTime? fechaFin;
 
     protected override async Task OnInitializedAsync()
     {
         await CargarDatos();
-        await CargarFacultades();
     }
 
-    private async Task CargarDatos() => alianzas = await Api.ListarAsync("Alianza");
-    private async Task CargarFacultades() => facultadesLista = await Api.ListarAsync("Facultad");
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol") ?? "";
+            StateHasChanged();
+        }
+    }
+
+    private async Task CargarDatos()
+    {
+        alianzas = await Api.ListarAsync("Alianza");
+    }
 
     private async Task Guardar()
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para guardar información. Tu rol es Consultor.";
+            return;
+        }
+
         var datos = new Dictionary<string, object?>
         {
-            { "id", id }, { "departamento", departamento },
+            { "id", id },
+            { "departamento", departamento },
             { "fechaInicio", fechaInicio?.ToString("yyyy-MM-dd") },
             { "fechaFin", fechaFin?.ToString("yyyy-MM-dd") },
             { "docente", docente }
@@ -85,14 +142,26 @@
 
         var resultado = await Api.CrearAsync("Alianza", datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
     }
 
     private async Task Actualizar()
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para actualizar información. Tu rol es Consultor.";
+            return;
+        }
+
         var datos = new Dictionary<string, object?>
         {
-            { "id", id }, { "departamento", departamento },
+            { "id", id },
+            { "departamento", departamento },
             { "fechaInicio", fechaInicio?.ToString("yyyy-MM-dd") },
             { "fechaFin", fechaFin?.ToString("yyyy-MM-dd") },
             { "docente", docente }
@@ -100,31 +169,44 @@
 
         var resultado = await Api.ActualizarAsync("Alianza", "id", id, datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
     }
 
     private async Task Eliminar(string idEliminar)
     {
+        if (rol != "Administrador")
+        {
+            mensaje = "Solo el Administrador puede eliminar registros.";
+            return;
+        }
+
         var resultado = await Api.EliminarAsync("Alianza", "id", idEliminar);
         mensaje = resultado.mensaje;
+
         await CargarDatos();
     }
 
     private void Seleccionar(Dictionary<string, object?> item)
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para editar. Tu rol es Consultor.";
+            return;
+        }
+
         id = item["id"]?.ToString() ?? "";
         departamento = item["departamento"]?.ToString() ?? "";
         docente = item["docente"]?.ToString() ?? "";
 
-        if (DateTime.TryParse(item["fechaInicio"]?.ToString(), out var fi))
-            fechaInicio = fi;
-        else
-            fechaInicio = null;
+        fechaInicio = DateTime.TryParse(item["fechaInicio"]?.ToString(), out var fi) ? fi : null;
+        fechaFin = DateTime.TryParse(item["fechaFin"]?.ToString(), out var ff) ? ff : null;
 
-        if (DateTime.TryParse(item["fechaFin"]?.ToString(), out var ff))
-            fechaFin = ff;
-        else
-            fechaFin = null;
+        mensaje = "Registro cargado para edición.";
     }
 
     private void Limpiar()

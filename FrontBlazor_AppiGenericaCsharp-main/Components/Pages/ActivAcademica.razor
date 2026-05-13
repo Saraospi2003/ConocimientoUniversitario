@@ -1,16 +1,28 @@
 ﻿@page "/activacademica"
 @rendermode InteractiveServer
+@inject IJSRuntime JS
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD Actividad Académica</h3>
+<div class="crud-header">
+    <div>
+        <span>Módulo académico</span>
+        <h2>Gestión de Actividades Académicas</h2>
+        <p>Administra actividades, créditos, horas, idioma, espacios académicos y programas asociados.</p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(rol))
+    {
+        <strong class="role-pill">@rol</strong>
+    }
+</div>
 
 <div class="mb-3"><label>ID</label><input class="form-control" @bind="id" /></div>
 <div class="mb-3"><label>Nombre</label><input class="form-control" @bind="nombre" /></div>
-<div class="mb-3"><label>Núm. créditos</label><input class="form-control" @bind="numCreditos" /></div>
+<div class="mb-3"><label>Número créditos</label><input class="form-control" @bind="numCreditos" /></div>
 <div class="mb-3"><label>Tipo</label><input class="form-control" @bind="tipo" /></div>
 <div class="mb-3"><label>Área formación</label><input class="form-control" @bind="areaFormacion" /></div>
-<div class="mb-3"><label>H. acompañamiento</label><input class="form-control" @bind="hAcom" /></div>
-<div class="mb-3"><label>H. independiente</label><input class="form-control" @bind="hIndep" /></div>
+<div class="mb-3"><label>Horas acompañamiento</label><input class="form-control" @bind="hAcom" /></div>
+<div class="mb-3"><label>Horas independientes</label><input class="form-control" @bind="hIndep" /></div>
 <div class="mb-3"><label>Idioma</label><input class="form-control" @bind="idioma" /></div>
 <div class="mb-3"><label>Espacio</label><input class="form-control" @bind="espacio" /></div>
 <div class="mb-3"><label>Entidad apoyo</label><input class="form-control" @bind="entidadApoyo" /></div>
@@ -28,9 +40,18 @@
 </div>
 
 <div class="mb-3">
-    <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
-    <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
-    <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    @if (rol == "Administrador" || rol == "Docente")
+    {
+        <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
+        <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
+        <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    }
+    else if (rol == "Consultor")
+    {
+        <div class="alert alert-warning">
+            Estás ingresando como Consultor. Solo puedes visualizar la información.
+        </div>
+    }
 </div>
 
 @if (!string.IsNullOrWhiteSpace(mensaje))
@@ -39,21 +60,47 @@
 }
 
 <h4>Listado de actividades académicas</h4>
+
 <table class="table table-bordered">
     <thead>
-        <tr><th>ID</th><th>Nombre</th><th>Programa</th><th>Acciones</th></tr>
+        <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Tipo</th>
+            <th>Programa</th>
+            <th>Acciones</th>
+        </tr>
     </thead>
+
     <tbody>
         @foreach (var item in actividades)
         {
             var idEliminar = item["id"]?.ToString() ?? "";
+
             <tr>
                 <td>@item["id"]</td>
                 <td>@item["nombre"]</td>
+                <td>@item["tipo"]</td>
                 <td>@item["programa"]</td>
                 <td>
-                    <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
+                    @if (rol == "Administrador" || rol == "Docente")
+                    {
+                        <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">
+                            Editar
+                        </button>
+                    }
+
+                    @if (rol == "Administrador")
+                    {
+                        <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">
+                            Eliminar
+                        </button>
+                    }
+
+                    @if (rol == "Consultor")
+                    {
+                        <span class="text-muted">Solo lectura</span>
+                    }
                 </td>
             </tr>
         }
@@ -61,11 +108,23 @@
 </table>
 
 @code {
+    private string rol = "";
     private List<Dictionary<string, object?>> actividades = new();
     private List<Dictionary<string, object?>> programasLista = new();
 
-    private string id = "", nombre = "", numCreditos = "", tipo = "", areaFormacion = "", hAcom = "", hIndep = "",
-                   idioma = "", espacio = "", entidadApoyo = "", paisEspejo = "", programa = "", mensaje = "";
+    private string id = "";
+    private string nombre = "";
+    private string numCreditos = "";
+    private string tipo = "";
+    private string areaFormacion = "";
+    private string hAcom = "";
+    private string hIndep = "";
+    private string idioma = "";
+    private string espacio = "";
+    private string entidadApoyo = "";
+    private string paisEspejo = "";
+    private string programa = "";
+    private string mensaje = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -73,48 +132,115 @@
         await CargarProgramas();
     }
 
-    private async Task CargarDatos() => actividades = await Api.ListarAsync("ActivAcademica");
-    private async Task CargarProgramas() => programasLista = await Api.ListarAsync("Programa");
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol") ?? "";
+            StateHasChanged();
+        }
+    }
+
+    private async Task CargarDatos()
+    {
+        actividades = await Api.ListarAsync("ActivAcademica");
+    }
+
+    private async Task CargarProgramas()
+    {
+        programasLista = await Api.ListarAsync("Programa");
+    }
 
     private async Task Guardar()
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para guardar información. Tu rol es Consultor.";
+            return;
+        }
+
         var datos = new Dictionary<string, object?>
         {
-            { "id", id }, { "nombre", nombre }, { "numCreditos", numCreditos }, { "tipo", tipo },
-            { "areaFormacion", areaFormacion }, { "hAcom", hAcom }, { "hIndep", hIndep },
-            { "idioma", idioma }, { "espacio", espacio }, { "entidadApoyo", entidadApoyo },
-            { "paisEspejo", paisEspejo }, { "programa", programa }
+            { "id", id },
+            { "nombre", nombre },
+            { "numCreditos", numCreditos },
+            { "tipo", tipo },
+            { "areaFormacion", areaFormacion },
+            { "hAcom", hAcom },
+            { "hIndep", hIndep },
+            { "idioma", idioma },
+            { "espacio", espacio },
+            { "entidadApoyo", entidadApoyo },
+            { "paisEspejo", paisEspejo },
+            { "programa", programa }
         };
 
         var resultado = await Api.CrearAsync("ActivAcademica", datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
     }
 
     private async Task Actualizar()
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para actualizar información. Tu rol es Consultor.";
+            return;
+        }
+
         var datos = new Dictionary<string, object?>
         {
-            { "id", id }, { "nombre", nombre }, { "numCreditos", numCreditos }, { "tipo", tipo },
-            { "areaFormacion", areaFormacion }, { "hAcom", hAcom }, { "hIndep", hIndep },
-            { "idioma", idioma }, { "espacio", espacio }, { "entidadApoyo", entidadApoyo },
-            { "paisEspejo", paisEspejo }, { "programa", programa }
+            { "id", id },
+            { "nombre", nombre },
+            { "numCreditos", numCreditos },
+            { "tipo", tipo },
+            { "areaFormacion", areaFormacion },
+            { "hAcom", hAcom },
+            { "hIndep", hIndep },
+            { "idioma", idioma },
+            { "espacio", espacio },
+            { "entidadApoyo", entidadApoyo },
+            { "paisEspejo", paisEspejo },
+            { "programa", programa }
         };
 
         var resultado = await Api.ActualizarAsync("ActivAcademica", "id", id, datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
     }
 
     private async Task Eliminar(string idEliminar)
     {
+        if (rol != "Administrador")
+        {
+            mensaje = "Solo el Administrador puede eliminar registros.";
+            return;
+        }
+
         var resultado = await Api.EliminarAsync("ActivAcademica", "id", idEliminar);
         mensaje = resultado.mensaje;
+
         await CargarDatos();
     }
 
     private void Seleccionar(Dictionary<string, object?> item)
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para editar. Tu rol es Consultor.";
+            return;
+        }
+
         id = item["id"]?.ToString() ?? "";
         nombre = item["nombre"]?.ToString() ?? "";
         numCreditos = item["numCreditos"]?.ToString() ?? "";
@@ -127,11 +253,24 @@
         entidadApoyo = item["entidadApoyo"]?.ToString() ?? "";
         paisEspejo = item["paisEspejo"]?.ToString() ?? "";
         programa = item["programa"]?.ToString() ?? "";
+
+        mensaje = "Registro cargado para edición.";
     }
 
     private void Limpiar()
     {
-        id = nombre = numCreditos = tipo = areaFormacion = hAcom = hIndep = "";
-        idioma = espacio = entidadApoyo = paisEspejo = programa = mensaje = "";
+        id = "";
+        nombre = "";
+        numCreditos = "";
+        tipo = "";
+        areaFormacion = "";
+        hAcom = "";
+        hIndep = "";
+        idioma = "";
+        espacio = "";
+        entidadApoyo = "";
+        paisEspejo = "";
+        programa = "";
+        mensaje = "";
     }
 }

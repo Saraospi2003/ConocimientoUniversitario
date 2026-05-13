@@ -8,7 +8,12 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddHttpClient<ApiService>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5034");
+    client.BaseAddress = new Uri("http://localhost:5034/");
+});
+
+builder.Services.AddScoped(sp => new HttpClient
+{
+    BaseAddress = new Uri("http://localhost:5034/")
 });
 
 var app = builder.Build();
@@ -19,7 +24,9 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseAntiforgery();
+
 app.MapStaticAssets();
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

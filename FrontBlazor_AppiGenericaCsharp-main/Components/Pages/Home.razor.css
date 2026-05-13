@@ -1,0 +1,315 @@
+.home-container {
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8f7ff 0%, #ffffff 45%, #f3f0ff 100%);
+    min-height: calc(100vh - 60px);
+}
+
+.loading-card {
+    background: white;
+    padding: 3rem;
+    border-radius: 24px;
+    text-align: center;
+    box-shadow: 0 15px 40px rgba(79, 70, 229, 0.12);
+}
+
+.hero-card {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 2rem;
+    align-items: center;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: white;
+    border-radius: 28px;
+    padding: 3rem;
+    box-shadow: 0 20px 50px rgba(79, 70, 229, 0.28);
+}
+
+.hero-content h1 {
+    font-size: 3rem;
+    font-weight: 800;
+    margin-top: 1rem;
+}
+
+.hero-content p {
+    font-size: 1.1rem;
+    max-width: 720px;
+    opacity: 0.95;
+}
+
+.hero-buttons {
+    margin-top: 2rem;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.badge-custom {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    color: inherit;
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    font-weight: 600;
+    backdrop-filter: blur(8px);
+}
+
+.hero-panel {
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 24px;
+    padding: 1.5rem;
+    backdrop-filter: blur(12px);
+}
+
+.role-mini-card {
+    background: white;
+    color: #1f2937;
+    padding: 1rem;
+    border-radius: 18px;
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+.role-mini-card.admin {
+    border-left: 6px solid #7c3aed;
+}
+
+.role-mini-card.docente {
+    border-left: 6px solid #2563eb;
+}
+
+.role-mini-card.consultor {
+    border-left: 6px solid #f59e0b;
+}
+
+.roles-section {
+    margin-top: 2.5rem;
+}
+
+.roles-section h2,
+.permission-card h2,
+.quick-access-card h2 {
+    font-weight: 800;
+    color: #1f2937;
+}
+
+.section-subtitle {
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+}
+
+.roles-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+.role-card {
+    background: white;
+    border-radius: 24px;
+    padding: 1.8rem;
+    box-shadow: 0 15px 35px rgba(17, 24, 39, 0.08);
+    border: 1px solid #eef2ff;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.role-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 45px rgba(79, 70, 229, 0.16);
+}
+
+.role-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.7rem;
+    background: #f5f3ff;
+    margin-bottom: 1rem;
+}
+
+.role-card h3 {
+    font-weight: 800;
+}
+
+.role-card p {
+    color: #6b7280;
+}
+
+.role-card ul {
+    padding-left: 1.2rem;
+    margin-bottom: 0;
+}
+
+.role-card li {
+    margin-bottom: 0.4rem;
+}
+
+.admin-card {
+    border-top: 6px solid #7c3aed;
+}
+
+.docente-card {
+    border-top: 6px solid #2563eb;
+}
+
+.consultor-card {
+    border-top: 6px solid #f59e0b;
+}
+
+.welcome-card {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: white;
+    border-radius: 28px;
+    padding: 2.5rem;
+    box-shadow: 0 20px 50px rgba(79, 70, 229, 0.28);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+}
+
+.welcome-card h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-top: 1rem;
+}
+
+.current-role-card {
+    min-width: 220px;
+    background: white;
+    color: #1f2937;
+    border-radius: 22px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+}
+
+.current-role-card span {
+    display: block;
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.current-role-card strong {
+    display: block;
+    font-size: 1.5rem;
+    margin-top: 0.3rem;
+}
+
+.admin-role {
+    border-bottom: 8px solid #7c3aed;
+}
+
+.docente-role {
+    border-bottom: 8px solid #2563eb;
+}
+
+.consultor-role {
+    border-bottom: 8px solid #f59e0b;
+}
+
+.permission-card,
+.quick-access-card {
+    margin-top: 2rem;
+    background: white;
+    border-radius: 24px;
+    padding: 2rem;
+    box-shadow: 0 15px 35px rgba(17, 24, 39, 0.08);
+    border: 1px solid #eef2ff;
+}
+
+.permission-banner {
+    padding: 1.4rem;
+    border-radius: 20px;
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.permission-banner h3 {
+    font-weight: 800;
+}
+
+.admin-banner {
+    background: #f5f3ff;
+    border-left: 8px solid #7c3aed;
+}
+
+.docente-banner {
+    background: #eff6ff;
+    border-left: 8px solid #2563eb;
+}
+
+.consultor-banner {
+    background: #fffbeb;
+    border-left: 8px solid #f59e0b;
+}
+
+.permissions-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.permissions-grid div {
+    background: #f9fafb;
+    padding: 1rem;
+    border-radius: 16px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.quick-grid {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.quick-button {
+    border: none;
+    background: #eef2ff;
+    color: #3730a3;
+    padding: 1rem 1.3rem;
+    border-radius: 18px;
+    font-weight: 700;
+    transition: all 0.2s ease;
+}
+
+.quick-button:hover {
+    background: #4f46e5;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.quick-button.dark {
+    background: #111827;
+    color: white;
+}
+
+.logout-button {
+    border-radius: 16px;
+    padding: 0.8rem 1.4rem;
+}
+
+@media (max-width: 900px) {
+    .hero-card,
+    .roles-grid,
+    .permissions-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .welcome-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .current-role-card {
+        width: 100%;
+    }
+}

@@ -1,30 +1,54 @@
 ﻿@page "/aspectonormativo"
 @rendermode InteractiveServer
+@inject IJSRuntime JS
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD Aspecto Normativo</h3>
+<div class="crud-header">
+    <div>
+        <span>Módulo normativo</span>
+        <h2>Gestión de Aspectos Normativos</h2>
+        <p>Administra los tipos, fuentes y descripciones de los aspectos normativos asociados al sistema académico.</p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(rol))
+    {
+        <strong class="role-pill">@rol</strong>
+    }
+</div>
 
 <div class="mb-3">
     <label>ID</label>
     <input class="form-control" @bind="id" />
 </div>
+
 <div class="mb-3">
     <label>Tipo</label>
     <input class="form-control" @bind="tipo" />
 </div>
+
 <div class="mb-3">
     <label>Descripción</label>
     <input class="form-control" @bind="descripcion" />
 </div>
+
 <div class="mb-3">
     <label>Fuente</label>
     <input class="form-control" @bind="fuente" />
 </div>
 
 <div class="mb-3">
-    <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
-    <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
-    <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    @if (rol == "Administrador" || rol == "Docente")
+    {
+        <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
+        <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
+        <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    }
+    else if (rol == "Consultor")
+    {
+        <div class="alert alert-warning">
+            Estás ingresando como Consultor. Solo puedes visualizar la información.
+        </div>
+    }
 </div>
 
 @if (!string.IsNullOrWhiteSpace(mensaje))
@@ -33,22 +57,47 @@
 }
 
 <h4>Listado de aspectos normativos</h4>
+
 <table class="table table-bordered">
     <thead>
-        <tr><th>ID</th><th>Tipo</th><th>Descripción</th><th>Fuente</th><th>Acciones</th></tr>
+        <tr>
+            <th>ID</th>
+            <th>Tipo</th>
+            <th>Descripción</th>
+            <th>Fuente</th>
+            <th>Acciones</th>
+        </tr>
     </thead>
+
     <tbody>
         @foreach (var item in aspectos)
         {
             var idEliminar = item["id"]?.ToString() ?? "";
+
             <tr>
                 <td>@item["id"]</td>
                 <td>@item["tipo"]</td>
                 <td>@item["descripcion"]</td>
                 <td>@item["fuente"]</td>
                 <td>
-                    <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
+                    @if (rol == "Administrador" || rol == "Docente")
+                    {
+                        <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">
+                            Editar
+                        </button>
+                    }
+
+                    @if (rol == "Administrador")
+                    {
+                        <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">
+                            Eliminar
+                        </button>
+                    }
+
+                    @if (rol == "Consultor")
+                    {
+                        <span class="text-muted">Solo lectura</span>
+                    }
                 </td>
             </tr>
         }
@@ -56,47 +105,128 @@
 </table>
 
 @code {
+    private string rol = "";
     private List<Dictionary<string, object?>> aspectos = new();
-    private string id = "", tipo = "", descripcion = "", fuente = "", mensaje = "";
 
-    protected override async Task OnInitializedAsync() => await CargarDatos();
-    private async Task CargarDatos() => aspectos = await Api.ListarAsync("aspecto_normativo");
+    private string id = "";
+    private string tipo = "";
+    private string descripcion = "";
+    private string fuente = "";
+    private string mensaje = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol") ?? "";
+            StateHasChanged();
+        }
+    }
+
+    private async Task CargarDatos()
+    {
+        aspectos = await Api.ListarAsync("aspecto_normativo");
+    }
 
     private async Task Guardar()
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(tipo) ||
-            string.IsNullOrWhiteSpace(descripcion) || string.IsNullOrWhiteSpace(fuente))
+        if (rol == "Consultor")
         {
-            mensaje = "Completa todos los campos."; StateHasChanged(); return;
+            mensaje = "No tienes permiso para guardar información. Tu rol es Consultor.";
+            return;
         }
-        var datos = new Dictionary<string, object?> { { "id", id }, { "tipo", tipo }, { "descripcion", descripcion }, { "fuente", fuente } };
+
+        if (string.IsNullOrWhiteSpace(id) ||
+            string.IsNullOrWhiteSpace(tipo) ||
+            string.IsNullOrWhiteSpace(descripcion) ||
+            string.IsNullOrWhiteSpace(fuente))
+        {
+            mensaje = "Completa todos los campos.";
+            StateHasChanged();
+            return;
+        }
+
+        var datos = new Dictionary<string, object?>
+        {
+            { "id", id },
+            { "tipo", tipo },
+            { "descripcion", descripcion },
+            { "fuente", fuente }
+        };
+
         var resultado = await Api.CrearAsync("aspecto_normativo", datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
     }
 
     private async Task Actualizar()
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(tipo) ||
-            string.IsNullOrWhiteSpace(descripcion) || string.IsNullOrWhiteSpace(fuente))
+        if (rol == "Consultor")
         {
-            mensaje = "Completa todos los campos."; StateHasChanged(); return;
+            mensaje = "No tienes permiso para actualizar información. Tu rol es Consultor.";
+            return;
         }
-        var datos = new Dictionary<string, object?> { { "id", id }, { "tipo", tipo }, { "descripcion", descripcion }, { "fuente", fuente } };
+
+        if (string.IsNullOrWhiteSpace(id) ||
+            string.IsNullOrWhiteSpace(tipo) ||
+            string.IsNullOrWhiteSpace(descripcion) ||
+            string.IsNullOrWhiteSpace(fuente))
+        {
+            mensaje = "Completa todos los campos.";
+            StateHasChanged();
+            return;
+        }
+
+        var datos = new Dictionary<string, object?>
+        {
+            { "id", id },
+            { "tipo", tipo },
+            { "descripcion", descripcion },
+            { "fuente", fuente }
+        };
+
         var resultado = await Api.ActualizarAsync("aspecto_normativo", "id", id, datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
     }
 
     private async Task Eliminar(string idEliminar)
     {
+        if (rol != "Administrador")
+        {
+            mensaje = "Solo el Administrador puede eliminar registros.";
+            return;
+        }
+
         var resultado = await Api.EliminarAsync("aspecto_normativo", "id", idEliminar);
         mensaje = resultado.mensaje;
+
         await CargarDatos();
     }
 
     private void Seleccionar(Dictionary<string, object?> item)
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para editar. Tu rol es Consultor.";
+            return;
+        }
+
         id = item["id"]?.ToString() ?? "";
         tipo = item["tipo"]?.ToString() ?? "";
         descripcion = item["descripcion"]?.ToString() ?? "";
@@ -104,5 +234,12 @@
         mensaje = "Registro cargado para edición.";
     }
 
-    private void Limpiar() { id = ""; tipo = ""; descripcion = ""; fuente = ""; mensaje = ""; }
+    private void Limpiar()
+    {
+        id = "";
+        tipo = "";
+        descripcion = "";
+        fuente = "";
+        mensaje = "";
+    }
 }

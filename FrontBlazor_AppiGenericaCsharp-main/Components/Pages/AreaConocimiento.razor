@@ -1,8 +1,20 @@
-    @page "/areaconocimiento"
+ @page "/areaconocimiento"
 @rendermode InteractiveServer
+@inject IJSRuntime JS
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD Área Conocimiento</h3>
+<div class="crud-header">
+    <div>
+        <span>Módulo académico</span>
+        <h2>Gestión de Áreas de Conocimiento</h2>
+        <p>Administra las áreas de conocimiento asociadas a los programas académicos.</p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(rol))
+    {
+        <strong class="role-pill">@rol</strong>
+    }
+</div>
 
 <div class="mb-3">
     <label>ID</label>
@@ -15,9 +27,18 @@
 </div>
 
 <div class="mb-3">
-    <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
-    <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
-    <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    @if (rol == "Administrador" || rol == "Docente")
+    {
+        <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
+        <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
+        <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    }
+    else if (rol == "Consultor")
+    {
+        <div class="alert alert-warning">
+            Estás ingresando como Consultor. Solo puedes visualizar la información.
+        </div>
+    }
 </div>
 
 @if (!string.IsNullOrWhiteSpace(mensaje))
@@ -26,6 +47,7 @@
 }
 
 <h4>Listado de áreas de conocimiento</h4>
+
 <table class="table table-bordered">
     <thead>
         <tr>
@@ -34,16 +56,34 @@
             <th>Acciones</th>
         </tr>
     </thead>
+
     <tbody>
         @foreach (var item in areas)
         {
             var idEliminar = item["id"]?.ToString() ?? "";
+
             <tr>
                 <td>@item["id"]</td>
                 <td>@item["nombre"]</td>
                 <td>
-                    <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
+                    @if (rol == "Administrador" || rol == "Docente")
+                    {
+                        <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">
+                            Editar
+                        </button>
+                    }
+
+                    @if (rol == "Administrador")
+                    {
+                        <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">
+                            Eliminar
+                        </button>
+                    }
+
+                    @if (rol == "Consultor")
+                    {
+                        <span class="text-muted">Solo lectura</span>
+                    }
                 </td>
             </tr>
         }
@@ -51,16 +91,40 @@
 </table>
 
 @code {
+    private string rol = "";
     private List<Dictionary<string, object?>> areas = new();
-    private string id = "", nombre = "", mensaje = "";
 
-    protected override async Task OnInitializedAsync() => await CargarDatos();
+    private string id = "";
+    private string nombre = "";
+    private string mensaje = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol") ?? "";
+            StateHasChanged();
+        }
+    }
 
     private async Task CargarDatos()
-        => areas = await Api.ListarAsync("AreaConocimiento");
+    {
+        areas = await Api.ListarAsync("AreaConocimiento");
+    }
 
     private async Task Guardar()
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para guardar información. Tu rol es Consultor.";
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre))
         {
             mensaje = "Completa todos los campos.";
@@ -86,6 +150,12 @@
 
     private async Task Actualizar()
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para actualizar información. Tu rol es Consultor.";
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nombre))
         {
             mensaje = "Completa todos los campos.";
@@ -111,13 +181,26 @@
 
     private async Task Eliminar(string idEliminar)
     {
+        if (rol != "Administrador")
+        {
+            mensaje = "Solo el Administrador puede eliminar registros.";
+            return;
+        }
+
         var resultado = await Api.EliminarAsync("AreaConocimiento", "id", idEliminar);
         mensaje = resultado.mensaje;
+
         await CargarDatos();
     }
 
     private void Seleccionar(Dictionary<string, object?> item)
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para editar. Tu rol es Consultor.";
+            return;
+        }
+
         id = item["id"]?.ToString() ?? "";
         nombre = item["nombre"]?.ToString() ?? "";
         mensaje = "Registro cargado para edición.";

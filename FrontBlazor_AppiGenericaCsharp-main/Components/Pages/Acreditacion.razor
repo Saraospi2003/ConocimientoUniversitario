@@ -1,8 +1,20 @@
 ﻿@page "/acreditacion"
 @rendermode InteractiveServer
+@inject IJSRuntime JS
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD Acreditación</h3>
+<div class="crud-header">
+    <div>
+        <span>Módulo de calidad académica</span>
+        <h2>Gestión de Acreditaciones</h2>
+        <p>Administra las resoluciones, fechas, calificaciones y programas asociados a procesos de acreditación.</p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(rol))
+    {
+        <strong class="role-pill">@rol</strong>
+    }
+</div>
 
 <div class="mb-3">
     <label>Resolución</label>
@@ -21,26 +33,38 @@
 
 <div class="mb-3">
     <label>Fecha inicio</label>
-    <input class="form-control" @bind="fechaInicio" />
+    <input type="date" class="form-control" @bind="fechaInicio" />
 </div>
 
 <div class="mb-3">
     <label>Fecha fin</label>
-    <input class="form-control" @bind="fechaFin" />
+    <input type="date" class="form-control" @bind="fechaFin" />
 </div>
 
-<select class="form-control" @bind="programa">
-    <option value="">Seleccione un programa</option>
-    @foreach (var pro in programasLista)
-    {
-        <option value="@pro["id"]">@pro["nombre"]</option>
-    }
-</select>
+<div class="mb-3">
+    <label>Programa</label>
+    <select class="form-control" @bind="programa">
+        <option value="">Seleccione un programa</option>
+        @foreach (var pro in programasLista)
+        {
+            <option value="@pro["id"]">@pro["nombre"]</option>
+        }
+    </select>
+</div>
 
 <div class="mb-3">
-    <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
-    <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
-    <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    @if (rol == "Administrador" || rol == "Docente")
+    {
+        <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
+        <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
+        <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    }
+    else if (rol == "Consultor")
+    {
+        <div class="alert alert-warning">
+            Estás ingresando como Consultor. Solo puedes visualizar la información.
+        </div>
+    }
 </div>
 
 @if (!string.IsNullOrWhiteSpace(mensaje))
@@ -49,28 +73,51 @@
 }
 
 <h4>Listado de acreditaciones</h4>
+
 <table class="table table-bordered">
     <thead>
         <tr>
             <th>Resolución</th>
             <th>Tipo</th>
             <th>Calificación</th>
+            <th>Fecha inicio</th>
+            <th>Fecha fin</th>
             <th>Programa</th>
             <th>Acciones</th>
         </tr>
     </thead>
+
     <tbody>
         @foreach (var item in acreditaciones)
         {
             var idEliminar = item["resolucion"]?.ToString() ?? "";
+
             <tr>
                 <td>@item["resolucion"]</td>
                 <td>@item["tipo"]</td>
                 <td>@item["calificacion"]</td>
+                <td>@item["fechaInicio"]</td>
+                <td>@item["fechaFin"]</td>
                 <td>@item["programa"]</td>
                 <td>
-                    <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
+                    @if (rol == "Administrador" || rol == "Docente")
+                    {
+                        <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">
+                            Editar
+                        </button>
+                    }
+
+                    @if (rol == "Administrador")
+                    {
+                        <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">
+                            Eliminar
+                        </button>
+                    }
+
+                    @if (rol == "Consultor")
+                    {
+                        <span class="text-muted">Solo lectura</span>
+                    }
                 </td>
             </tr>
         }
@@ -78,27 +125,58 @@
 </table>
 
 @code {
+    private string rol = "";
     private List<Dictionary<string, object?>> acreditaciones = new();
-    private string resolucion = "", tipo = "", calificacion = "", fechaInicio = "", fechaFin = "", programa = "", mensaje = "";
-
     private List<Dictionary<string, object?>> programasLista = new();
 
-    private async Task CargarProgramas()
-    => programasLista = await Api.ListarAsync("Programa");
+    private string resolucion = "";
+    private string tipo = "";
+    private string calificacion = "";
+    private string programa = "";
+    private string mensaje = "";
+
+    private DateTime? fechaInicio;
+    private DateTime? fechaFin;
+
     protected override async Task OnInitializedAsync()
-{
-    await CargarDatos();
-    await CargarProgramas();
-}
+    {
+        await CargarDatos();
+        await CargarProgramas();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol") ?? "";
+            StateHasChanged();
+        }
+    }
 
     private async Task CargarDatos()
-        => acreditaciones = await Api.ListarAsync("Acreditacion");
+    {
+        acreditaciones = await Api.ListarAsync("Acreditacion");
+    }
+
+    private async Task CargarProgramas()
+    {
+        programasLista = await Api.ListarAsync("Programa");
+    }
 
     private async Task Guardar()
     {
-        if (string.IsNullOrWhiteSpace(resolucion) || string.IsNullOrWhiteSpace(tipo) ||
-            string.IsNullOrWhiteSpace(calificacion) || string.IsNullOrWhiteSpace(fechaInicio) ||
-            string.IsNullOrWhiteSpace(fechaFin) || string.IsNullOrWhiteSpace(programa))
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para guardar información. Tu rol es Consultor.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(resolucion) ||
+            string.IsNullOrWhiteSpace(tipo) ||
+            string.IsNullOrWhiteSpace(calificacion) ||
+            fechaInicio == null ||
+            fechaFin == null ||
+            string.IsNullOrWhiteSpace(programa))
         {
             mensaje = "Completa todos los campos.";
             return;
@@ -109,48 +187,79 @@
             { "resolucion", resolucion },
             { "tipo", tipo },
             { "calificacion", calificacion },
-            { "fechaInicio", fechaInicio },
-            { "fechaFin", fechaFin },
+            { "fechaInicio", fechaInicio?.ToString("yyyy-MM-dd") },
+            { "fechaFin", fechaFin?.ToString("yyyy-MM-dd") },
             { "programa", programa }
         };
 
         var resultado = await Api.CrearAsync("Acreditacion", datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
     }
 
     private async Task Actualizar()
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para actualizar información. Tu rol es Consultor.";
+            return;
+        }
+
         var datos = new Dictionary<string, object?>
         {
             { "resolucion", resolucion },
             { "tipo", tipo },
             { "calificacion", calificacion },
-            { "fechaInicio", fechaInicio },
-            { "fechaFin", fechaFin },
+            { "fechaInicio", fechaInicio?.ToString("yyyy-MM-dd") },
+            { "fechaFin", fechaFin?.ToString("yyyy-MM-dd") },
             { "programa", programa }
         };
 
         var resultado = await Api.ActualizarAsync("Acreditacion", "resolucion", resolucion, datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
     }
 
     private async Task Eliminar(string idEliminar)
     {
+        if (rol != "Administrador")
+        {
+            mensaje = "Solo el Administrador puede eliminar registros.";
+            return;
+        }
+
         var resultado = await Api.EliminarAsync("Acreditacion", "resolucion", idEliminar);
         mensaje = resultado.mensaje;
+
         await CargarDatos();
     }
 
     private void Seleccionar(Dictionary<string, object?> item)
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para editar. Tu rol es Consultor.";
+            return;
+        }
+
         resolucion = item["resolucion"]?.ToString() ?? "";
         tipo = item["tipo"]?.ToString() ?? "";
         calificacion = item["calificacion"]?.ToString() ?? "";
-        fechaInicio = item["fechaInicio"]?.ToString() ?? "";
-        fechaFin = item["fechaFin"]?.ToString() ?? "";
         programa = item["programa"]?.ToString() ?? "";
+
+        fechaInicio = DateTime.TryParse(item["fechaInicio"]?.ToString(), out var fi) ? fi : null;
+        fechaFin = DateTime.TryParse(item["fechaFin"]?.ToString(), out var ff) ? ff : null;
+
         mensaje = "Registro cargado para edición.";
     }
 
@@ -159,9 +268,9 @@
         resolucion = "";
         tipo = "";
         calificacion = "";
-        fechaInicio = "";
-        fechaFin = "";
         programa = "";
+        fechaInicio = null;
+        fechaFin = null;
         mensaje = "";
     }
 }

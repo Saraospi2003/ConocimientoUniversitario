@@ -1,0 +1,141 @@
+@page "/gestion-usuarios"
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<h3>Gestión de usuarios</h3>
+
+<div class="users-header">
+    <div>
+        <span>Panel administrativo</span>
+        <h2>Gestión de usuarios</h2>
+        <p>Administra los usuarios registrados y cambia sus roles dentro del sistema.</p>
+    </div>
+</div>
+
+@if (!cargado)
+{
+    <p>Cargando...</p>
+}
+else if (!esAdmin)
+{
+    <div class="alert alert-danger">
+        No tienes permiso para acceder a esta sección. Solo el Administrador puede gestionar usuarios.
+    </div>
+}
+else
+{
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Rol actual</th>
+                <th>Nuevo rol</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var usuario in usuarios)
+            {
+                <tr>
+                    <td>@usuario.Nombre</td>
+                    <td>@usuario.Correo</td>
+                    <td>@usuario.Rol</td>
+                    <td>
+                        <select class="form-control" @bind="usuario.NuevoRol">
+                            <option value="Administrador">Administrador</option>
+                            <option value="Docente">Docente</option>
+                            <option value="Consultor">Consultor</option>
+                        </select>
+                    </td>
+                    <td>
+                        <button class="btn btn-warning" @onclick="() => CambiarRol(usuario)">
+                            Cambiar rol
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<p>@mensaje</p>
+
+@code {
+    List<UsuarioDto> usuarios = new();
+
+    bool esAdmin = false;
+    bool cargado = false;
+
+    string mensaje = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol");
+
+            esAdmin = rol == "Administrador";
+
+            if (esAdmin)
+            {
+                usuarios = await Http.GetFromJsonAsync<List<UsuarioDto>>("api/Usuarios") ?? new();
+
+                foreach (var usuario in usuarios)
+                {
+                    usuario.NuevoRol = usuario.Rol;
+                }
+            }
+
+            cargado = true;
+
+            StateHasChanged();
+        }
+    }
+
+    async Task CambiarRol(UsuarioDto usuario)
+    {
+        var dto = new CambiarRolDto
+        {
+            UsuarioId = usuario.Id,
+            NuevoRol = usuario.NuevoRol
+        };
+
+        var respuesta = await Http.PutAsJsonAsync("api/Usuarios/cambiar-rol", dto);
+
+        if (respuesta.IsSuccessStatusCode)
+        {
+            usuario.Rol = usuario.NuevoRol;
+            mensaje = "Rol actualizado correctamente";
+        }
+        else
+        {
+            var error = await respuesta.Content.ReadAsStringAsync();
+            mensaje = "Error al cambiar el rol: " + error;
+        }
+    }
+
+    public class UsuarioDto
+    {
+        public int Id { get; set; }
+
+        public string Nombre { get; set; } = "";
+
+        public string Correo { get; set; } = "";
+
+        public string Password { get; set; } = "";
+
+        public string Rol { get; set; } = "";
+
+        public string NuevoRol { get; set; } = "";
+    }
+
+    public class CambiarRolDto
+    {
+        public int UsuarioId { get; set; }
+
+        public string NuevoRol { get; set; } = "";
+    }
+}

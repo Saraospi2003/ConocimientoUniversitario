@@ -1,8 +1,20 @@
 ﻿@page "/facultad"
 @rendermode InteractiveServer
+@inject IJSRuntime JS
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD Facultad</h3>
+<div class="crud-header">
+    <div>
+        <span>Módulo académico</span>
+        <h2>Gestión de Facultades</h2>
+        <p>Consulta y administra la información de las facultades universitarias y su relación con universidades.</p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(rol))
+    {
+        <strong class="role-pill">@rol</strong>
+    }
+</div>
 
 <div class="mb-3">
     <label>ID</label>
@@ -28,6 +40,7 @@
     <label>Universidad</label>
     <select class="form-control" @bind="universidad">
         <option value="">Seleccione una universidad</option>
+
         @foreach (var uni in universidades)
         {
             <option value="@uni["id"]">@uni["nombre"]</option>
@@ -36,9 +49,26 @@
 </div>
 
 <div class="mb-3">
-    <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
-    <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
-    <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    @if (rol == "Administrador" || rol == "Docente")
+    {
+        <button class="btn btn-primary me-2" @onclick="Guardar">
+            Guardar
+        </button>
+
+        <button class="btn btn-warning me-2" @onclick="Actualizar">
+            Actualizar
+        </button>
+
+        <button class="btn btn-secondary" @onclick="Limpiar">
+            Limpiar
+        </button>
+    }
+    else if (rol == "Consultor")
+    {
+        <div class="alert alert-warning">
+            Estás ingresando como Consultor. Solo puedes visualizar la información.
+        </div>
+    }
 </div>
 
 @if (!string.IsNullOrWhiteSpace(mensaje))
@@ -47,6 +77,7 @@
 }
 
 <h4>Listado de facultades</h4>
+
 <table class="table table-bordered">
     <thead>
         <tr>
@@ -58,10 +89,12 @@
             <th>Acciones</th>
         </tr>
     </thead>
+
     <tbody>
         @foreach (var item in facultades)
         {
             var idEliminar = item["id"]?.ToString() ?? "";
+
             <tr>
                 <td>@item["id"]</td>
                 <td>@item["nombre"]</td>
@@ -69,8 +102,24 @@
                 <td>@item["fechaIn"]</td>
                 <td>@item["universidad"]</td>
                 <td>
-                    <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
+                    @if (rol == "Administrador" || rol == "Docente")
+                    {
+                        <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">
+                            Editar
+                        </button>
+                    }
+
+                    @if (rol == "Administrador")
+                    {
+                        <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">
+                            Eliminar
+                        </button>
+                    }
+
+                    @if (rol == "Consultor")
+                    {
+                        <span class="text-muted">Solo lectura</span>
+                    }
                 </td>
             </tr>
         }
@@ -79,25 +128,53 @@
 
 @code {
     private List<Dictionary<string, object?>> facultades = new();
-    private string id = "", nombre = "", tipo = "", universidad = "", mensaje = "";
-    private DateTime? fechaIn;
-
-    private async Task CargarDatos()
-        => facultades = await Api.ListarAsync("Facultad");
-
     private List<Dictionary<string, object?>> universidades = new();
+
+    private string rol = "";
+    private bool cargadoRol = false;
+
+    private string id = "";
+    private string nombre = "";
+    private string tipo = "";
+    private string universidad = "";
+    private string mensaje = "";
+
+    private DateTime? fechaIn;
 
     protected override async Task OnInitializedAsync()
     {
-    await CargarDatos();
-    await CargarUniversidades();
+        await CargarDatos();
+        await CargarUniversidades();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol") ?? "";
+            cargadoRol = true;
+            StateHasChanged();
         }
+    }
+
+    private async Task CargarDatos()
+    {
+        facultades = await Api.ListarAsync("Facultad");
+    }
 
     private async Task CargarUniversidades()
-    => universidades = await Api.ListarAsync("Universidad");
+    {
+        universidades = await Api.ListarAsync("Universidad");
+    }
 
     private async Task Guardar()
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para guardar información. Tu rol es Consultor.";
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(id) ||
             string.IsNullOrWhiteSpace(nombre) ||
             string.IsNullOrWhiteSpace(tipo) ||
@@ -130,6 +207,12 @@
 
     private async Task Actualizar()
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para actualizar información. Tu rol es Consultor.";
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(id) ||
             string.IsNullOrWhiteSpace(nombre) ||
             string.IsNullOrWhiteSpace(tipo) ||
@@ -162,6 +245,12 @@
 
     private async Task Eliminar(string idEliminar)
     {
+        if (rol != "Administrador")
+        {
+            mensaje = "Solo el Administrador puede eliminar registros.";
+            return;
+        }
+
         var resultado = await Api.EliminarAsync("Facultad", "id", idEliminar);
         mensaje = resultado.mensaje;
         await CargarDatos();
@@ -169,15 +258,25 @@
 
     private void Seleccionar(Dictionary<string, object?> item)
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para editar. Tu rol es Consultor.";
+            return;
+        }
+
         id = item["id"]?.ToString() ?? "";
         nombre = item["nombre"]?.ToString() ?? "";
         tipo = item["tipo"]?.ToString() ?? "";
         universidad = item["universidad"]?.ToString() ?? "";
 
         if (DateTime.TryParse(item["fechaIn"]?.ToString(), out var f))
+        {
             fechaIn = f;
+        }
         else
+        {
             fechaIn = null;
+        }
 
         mensaje = "Registro cargado para edición.";
     }

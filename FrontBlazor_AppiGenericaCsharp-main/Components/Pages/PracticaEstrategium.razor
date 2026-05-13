@@ -1,8 +1,20 @@
 ﻿@page "/practicaestrategium"
 @rendermode InteractiveServer
+@inject IJSRuntime JS
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD Práctica Estrategia</h3>
+<div class="crud-header">
+    <div>
+        <span>Módulo estratégico</span>
+        <h2>Gestión de Prácticas Estratégicas</h2>
+        <p>Administra prácticas, tipos, nombres y descripciones relacionadas con estrategias académicas.</p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(rol))
+    {
+        <strong class="role-pill">@rol</strong>
+    }
+</div>
 
 <div class="mb-3">
     <label>ID</label>
@@ -25,9 +37,18 @@
 </div>
 
 <div class="mb-3">
-    <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
-    <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
-    <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    @if (rol == "Administrador" || rol == "Docente")
+    {
+        <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
+        <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
+        <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    }
+    else if (rol == "Consultor")
+    {
+        <div class="alert alert-warning">
+            Estás ingresando como Consultor. Solo puedes visualizar la información.
+        </div>
+    }
 </div>
 
 @if (!string.IsNullOrWhiteSpace(mensaje))
@@ -36,6 +57,7 @@
 }
 
 <h4>Listado de prácticas estratégicas</h4>
+
 <table class="table table-bordered">
     <thead>
         <tr>
@@ -46,18 +68,36 @@
             <th>Acciones</th>
         </tr>
     </thead>
+
     <tbody>
         @foreach (var item in practicas)
         {
             var idEliminar = item["id"]?.ToString() ?? "";
+
             <tr>
                 <td>@item["id"]</td>
                 <td>@item["tipo"]</td>
                 <td>@item["nombre"]</td>
                 <td>@item["descripcion"]</td>
                 <td>
-                    <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
+                    @if (rol == "Administrador" || rol == "Docente")
+                    {
+                        <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">
+                            Editar
+                        </button>
+                    }
+
+                    @if (rol == "Administrador")
+                    {
+                        <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">
+                            Eliminar
+                        </button>
+                    }
+
+                    @if (rol == "Consultor")
+                    {
+                        <span class="text-muted">Solo lectura</span>
+                    }
                 </td>
             </tr>
         }
@@ -65,17 +105,46 @@
 </table>
 
 @code {
+    private string rol = "";
     private List<Dictionary<string, object?>> practicas = new();
-    private string id = "", tipo = "", nombre = "", descripcion = "", mensaje = "";
 
-    protected override async Task OnInitializedAsync() => await CargarDatos();
+    private string id = "";
+    private string tipo = "";
+    private string nombre = "";
+    private string descripcion = "";
+    private string mensaje = "";
 
-    private async Task CargarDatos() => practicas = await Api.ListarAsync("practicaestrategium");
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol") ?? "";
+            StateHasChanged();
+        }
+    }
+
+    private async Task CargarDatos()
+    {
+        practicas = await Api.ListarAsync("practicaestrategium");
+    }
 
     private async Task Guardar()
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(tipo) ||
-            string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(descripcion))
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para guardar información. Tu rol es Consultor.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(id) ||
+            string.IsNullOrWhiteSpace(tipo) ||
+            string.IsNullOrWhiteSpace(nombre) ||
+            string.IsNullOrWhiteSpace(descripcion))
         {
             mensaje = "Completa todos los campos.";
             StateHasChanged();
@@ -92,6 +161,7 @@
 
         var resultado = await Api.CrearAsync("practicaestrategium", datos);
         mensaje = resultado.mensaje;
+
         if (resultado.exito)
         {
             Limpiar();
@@ -101,8 +171,16 @@
 
     private async Task Actualizar()
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(tipo) ||
-            string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(descripcion))
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para actualizar información. Tu rol es Consultor.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(id) ||
+            string.IsNullOrWhiteSpace(tipo) ||
+            string.IsNullOrWhiteSpace(nombre) ||
+            string.IsNullOrWhiteSpace(descripcion))
         {
             mensaje = "Completa todos los campos.";
             StateHasChanged();
@@ -119,6 +197,7 @@
 
         var resultado = await Api.ActualizarAsync("practicaestrategium", "id", id, datos);
         mensaje = resultado.mensaje;
+
         if (resultado.exito)
         {
             Limpiar();
@@ -128,6 +207,12 @@
 
     private async Task Eliminar(string idEliminar)
     {
+        if (rol != "Administrador")
+        {
+            mensaje = "Solo el Administrador puede eliminar registros.";
+            return;
+        }
+
         var resultado = await Api.EliminarAsync("practicaestrategium", "id", idEliminar);
         mensaje = resultado.mensaje;
         await CargarDatos();
@@ -135,6 +220,12 @@
 
     private void Seleccionar(Dictionary<string, object?> item)
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para editar. Tu rol es Consultor.";
+            return;
+        }
+
         id = item["id"]?.ToString() ?? "";
         tipo = item["tipo"]?.ToString() ?? "";
         nombre = item["nombre"]?.ToString() ?? "";

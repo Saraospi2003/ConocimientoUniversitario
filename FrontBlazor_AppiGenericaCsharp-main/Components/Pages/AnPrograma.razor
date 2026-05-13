@@ -1,8 +1,20 @@
 ﻿@page "/anprograma"
 @rendermode InteractiveServer
+@inject IJSRuntime JS
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD An_programa</h3>
+<div class="crud-header">
+    <div>
+        <span>Relación normativa</span>
+        <h2>Aspectos Normativos por Programa</h2>
+        <p>Asocia los aspectos normativos con los programas académicos del sistema.</p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(rol))
+    {
+        <strong class="role-pill">@rol</strong>
+    }
+</div>
 
 <div class="mb-3">
     <label>Aspecto Normativo</label>
@@ -27,8 +39,17 @@
 </div>
 
 <div class="mb-3">
-    <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
-    <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    @if (rol == "Administrador" || rol == "Docente")
+    {
+        <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
+        <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    }
+    else if (rol == "Consultor")
+    {
+        <div class="alert alert-warning">
+            Estás ingresando como Consultor. Solo puedes visualizar la información.
+        </div>
+    }
 </div>
 
 @if (!string.IsNullOrWhiteSpace(mensaje))
@@ -37,20 +58,36 @@
 }
 
 <h4>Listado de An_programa</h4>
+
 <table class="table table-bordered">
     <thead>
-        <tr><th>Aspecto Normativo</th><th>Programa</th><th>Acciones</th></tr>
+        <tr>
+            <th>Aspecto Normativo</th>
+            <th>Programa</th>
+            <th>Acciones</th>
+        </tr>
     </thead>
+
     <tbody>
         @foreach (var item in registros)
         {
             var aspectoEliminar = item["aspectoNormativo"]?.ToString() ?? "";
             var programaEliminar = item["programa"]?.ToString() ?? "";
+
             <tr>
                 <td>@item["aspectoNormativo"]</td>
                 <td>@item["programa"]</td>
                 <td>
-                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(aspectoEliminar, programaEliminar)">Eliminar</button>
+                    @if (rol == "Administrador")
+                    {
+                        <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(aspectoEliminar, programaEliminar)">
+                            Eliminar
+                        </button>
+                    }
+                    else
+                    {
+                        <span class="text-muted">Solo lectura</span>
+                    }
                 </td>
             </tr>
         }
@@ -58,11 +95,15 @@
 </table>
 
 @code {
+    private string rol = "";
+
     private List<Dictionary<string, object?>> registros = new();
     private List<Dictionary<string, object?>> aspectosLista = new();
     private List<Dictionary<string, object?>> programasLista = new();
 
-    private string aspectoNormativo = "", programa = "", mensaje = "";
+    private string aspectoNormativo = "";
+    private string programa = "";
+    private string mensaje = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -71,12 +112,45 @@
         await CargarProgramas();
     }
 
-    private async Task CargarDatos() => registros = await Api.ListarAsync("AnPrograma");
-    private async Task CargarAspectos() => aspectosLista = await Api.ListarAsync("AspectoNormativo");
-    private async Task CargarProgramas() => programasLista = await Api.ListarAsync("Programa");
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol") ?? "";
+            StateHasChanged();
+        }
+    }
+
+    private async Task CargarDatos()
+    {
+        registros = await Api.ListarAsync("AnPrograma");
+    }
+
+    private async Task CargarAspectos()
+    {
+        aspectosLista = await Api.ListarAsync("AspectoNormativo");
+    }
+
+    private async Task CargarProgramas()
+    {
+        programasLista = await Api.ListarAsync("Programa");
+    }
 
     private async Task Guardar()
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para guardar información. Tu rol es Consultor.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(aspectoNormativo) ||
+            string.IsNullOrWhiteSpace(programa))
+        {
+            mensaje = "Completa todos los campos.";
+            return;
+        }
+
         var datos = new Dictionary<string, object?>
         {
             { "aspectoNormativo", aspectoNormativo },
@@ -85,11 +159,22 @@
 
         var resultado = await Api.CrearAsync("AnPrograma", datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
     }
 
     private async Task Eliminar(string aspectoEliminar, string programaEliminar)
     {
+        if (rol != "Administrador")
+        {
+            mensaje = "Solo el Administrador puede eliminar registros.";
+            return;
+        }
+
         var resultado = await Api.EliminarCompuestoAsync("AnPrograma",
             new Dictionary<string, string>
             {

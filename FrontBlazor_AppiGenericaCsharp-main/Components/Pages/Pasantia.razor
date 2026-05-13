@@ -1,8 +1,20 @@
 ﻿@page "/pasantia"
 @rendermode InteractiveServer
+@inject IJSRuntime JS
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
 
-<h3>CRUD Pasantía</h3>
+<div class="crud-header">
+    <div>
+        <span>Módulo académico</span>
+        <h2>Gestión de Pasantías</h2>
+        <p>Administra las pasantías asociadas a programas académicos, empresas, países y descripciones.</p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(rol))
+    {
+        <strong class="role-pill">@rol</strong>
+    }
+</div>
 
 <div class="mb-3"><label>ID</label><input class="form-control" @bind="id" /></div>
 <div class="mb-3"><label>Nombre</label><input class="form-control" @bind="nombre" /></div>
@@ -14,6 +26,7 @@
     <label>Programa</label>
     <select class="form-control" @bind="programa">
         <option value="">Seleccione un programa</option>
+
         @foreach (var pro in programasLista)
         {
             <option value="@pro["id"]">@pro["nombre"]</option>
@@ -22,9 +35,18 @@
 </div>
 
 <div class="mb-3">
-    <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
-    <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
-    <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    @if (rol == "Administrador" || rol == "Docente")
+    {
+        <button class="btn btn-primary me-2" @onclick="Guardar">Guardar</button>
+        <button class="btn btn-warning me-2" @onclick="Actualizar">Actualizar</button>
+        <button class="btn btn-secondary" @onclick="Limpiar">Limpiar</button>
+    }
+    else if (rol == "Consultor")
+    {
+        <div class="alert alert-warning">
+            Estás ingresando como Consultor. Solo puedes visualizar la información.
+        </div>
+    }
 </div>
 
 @if (!string.IsNullOrWhiteSpace(mensaje))
@@ -33,21 +55,45 @@
 }
 
 <h4>Listado de pasantías</h4>
+
 <table class="table table-bordered">
     <thead>
-        <tr><th>ID</th><th>Nombre</th><th>Programa</th><th>Acciones</th></tr>
+        <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Programa</th>
+            <th>Acciones</th>
+        </tr>
     </thead>
+
     <tbody>
         @foreach (var item in pasantias)
         {
             var idEliminar = item["id"]?.ToString() ?? "";
+
             <tr>
                 <td>@item["id"]</td>
                 <td>@item["nombre"]</td>
                 <td>@item["programa"]</td>
                 <td>
-                    <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">Editar</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">Eliminar</button>
+                    @if (rol == "Administrador" || rol == "Docente")
+                    {
+                        <button class="btn btn-sm btn-info me-1" @onclick="() => Seleccionar(item)">
+                            Editar
+                        </button>
+                    }
+
+                    @if (rol == "Administrador")
+                    {
+                        <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(idEliminar)">
+                            Eliminar
+                        </button>
+                    }
+
+                    @if (rol == "Consultor")
+                    {
+                        <span class="text-muted">Solo lectura</span>
+                    }
                 </td>
             </tr>
         }
@@ -55,10 +101,17 @@
 </table>
 
 @code {
+    private string rol = "";
     private List<Dictionary<string, object?>> pasantias = new();
     private List<Dictionary<string, object?>> programasLista = new();
 
-    private string id = "", nombre = "", pais = "", empresa = "", descripcion = "", programa = "", mensaje = "";
+    private string id = "";
+    private string nombre = "";
+    private string pais = "";
+    private string empresa = "";
+    private string descripcion = "";
+    private string programa = "";
+    private string mensaje = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -66,37 +119,89 @@
         await CargarProgramas();
     }
 
-    private async Task CargarDatos() => pasantias = await Api.ListarAsync("Pasantia");
-    private async Task CargarProgramas() => programasLista = await Api.ListarAsync("Programa");
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol") ?? "";
+            StateHasChanged();
+        }
+    }
+
+    private async Task CargarDatos()
+    {
+        pasantias = await Api.ListarAsync("Pasantia");
+    }
+
+    private async Task CargarProgramas()
+    {
+        programasLista = await Api.ListarAsync("Programa");
+    }
 
     private async Task Guardar()
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para guardar información. Tu rol es Consultor.";
+            return;
+        }
+
         var datos = new Dictionary<string, object?>
         {
-            { "id", id }, { "nombre", nombre }, { "pais", pais }, { "empresa", empresa },
-            { "descripcion", descripcion }, { "programa", programa }
+            { "id", id },
+            { "nombre", nombre },
+            { "pais", pais },
+            { "empresa", empresa },
+            { "descripcion", descripcion },
+            { "programa", programa }
         };
 
         var resultado = await Api.CrearAsync("Pasantia", datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
     }
 
     private async Task Actualizar()
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para actualizar información. Tu rol es Consultor.";
+            return;
+        }
+
         var datos = new Dictionary<string, object?>
         {
-            { "id", id }, { "nombre", nombre }, { "pais", pais }, { "empresa", empresa },
-            { "descripcion", descripcion }, { "programa", programa }
+            { "id", id },
+            { "nombre", nombre },
+            { "pais", pais },
+            { "empresa", empresa },
+            { "descripcion", descripcion },
+            { "programa", programa }
         };
 
         var resultado = await Api.ActualizarAsync("Pasantia", "id", id, datos);
         mensaje = resultado.mensaje;
-        if (resultado.exito) { Limpiar(); await CargarDatos(); }
+
+        if (resultado.exito)
+        {
+            Limpiar();
+            await CargarDatos();
+        }
     }
 
     private async Task Eliminar(string idEliminar)
     {
+        if (rol != "Administrador")
+        {
+            mensaje = "Solo el Administrador puede eliminar registros.";
+            return;
+        }
+
         var resultado = await Api.EliminarAsync("Pasantia", "id", idEliminar);
         mensaje = resultado.mensaje;
         await CargarDatos();
@@ -104,16 +209,29 @@
 
     private void Seleccionar(Dictionary<string, object?> item)
     {
+        if (rol == "Consultor")
+        {
+            mensaje = "No tienes permiso para editar. Tu rol es Consultor.";
+            return;
+        }
+
         id = item["id"]?.ToString() ?? "";
         nombre = item["nombre"]?.ToString() ?? "";
         pais = item["pais"]?.ToString() ?? "";
         empresa = item["empresa"]?.ToString() ?? "";
         descripcion = item["descripcion"]?.ToString() ?? "";
         programa = item["programa"]?.ToString() ?? "";
+        mensaje = "Registro cargado para edición.";
     }
 
     private void Limpiar()
     {
-        id = nombre = pais = empresa = descripcion = programa = mensaje = "";
+        id = "";
+        nombre = "";
+        pais = "";
+        empresa = "";
+        descripcion = "";
+        programa = "";
+        mensaje = "";
     }
 }

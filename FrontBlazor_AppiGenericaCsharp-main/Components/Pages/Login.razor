@@ -1,0 +1,79 @@
+@page "/login"
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+<h3>Iniciar sesión</h3>
+
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h2>Iniciar sesión</h2>
+            <p>Accede al sistema de innovación universitaria según tu rol.</p>
+        </div>
+
+        <div class="mb-3">
+            <label>Correo</label>
+            <input class="form-control" @bind="login.Correo" placeholder="correo@gmail.com" />
+        </div>
+
+        <div class="mb-3">
+            <label>Contraseña</label>
+            <input type="password" class="form-control" @bind="login.Password" placeholder="Ingresa tu contraseña" />
+        </div>
+
+        <button class="btn btn-primary w-100" @onclick="IniciarSesion">
+            Ingresar
+        </button>
+
+        <div class="text-center mt-3">
+            <a href="/olvide-password">¿Olvidaste tu contraseña?</a>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(mensaje))
+        {
+            <div class="alert alert-info mt-3">
+                @mensaje
+            </div>
+        }
+    </div>
+</div>
+@code {
+    LoginDto login = new();
+    string mensaje = "";
+
+    async Task IniciarSesion()
+    {
+        var respuesta = await Http.PostAsJsonAsync("api/Auth/login", login);
+
+        if (respuesta.IsSuccessStatusCode)
+        {
+            var usuario = await respuesta.Content.ReadFromJsonAsync<UsuarioLoginDto>();
+
+            await JS.InvokeVoidAsync("localStorage.setItem", "idUsuario", usuario!.Id.ToString());
+            await JS.InvokeVoidAsync("localStorage.setItem", "nombre", usuario.Nombre);
+            await JS.InvokeVoidAsync("localStorage.setItem", "correo", usuario.Correo);
+            await JS.InvokeVoidAsync("localStorage.setItem", "rol", usuario.Rol);
+
+            Nav.NavigateTo("/");
+        }
+        else
+        {
+            mensaje = "Correo o contraseña incorrectos";
+        }
+    }
+
+    public class LoginDto
+    {
+        public string Correo { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+
+    public class UsuarioLoginDto
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; } = "";
+        public string Correo { get; set; } = "";
+        public string Rol { get; set; } = "";
+    }
+}

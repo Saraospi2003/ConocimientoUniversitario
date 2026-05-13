@@ -1,0 +1,670 @@
+@page "/programa-acreditaciones"
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<div class="crud-header">
+    <div>
+        <span>Maestro - Detalle</span>
+        <h2>Programa y Acreditaciones</h2>
+        <p>Gestiona programas académicos junto con sus acreditaciones desde una sola vista integrada.</p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(rol))
+    {
+        <strong class="role-pill">@rol</strong>
+    }
+</div>
+
+@if (vista == "listar")
+{
+    <div class="toolbar-card">
+        <div>
+            <h4>Listado de programas</h4>
+            <p>Selecciona un programa para ver, editar o eliminar sus acreditaciones.</p>
+        </div>
+
+        @if (rol == "Administrador" || rol == "Docente")
+        {
+            <button class="btn btn-primary" @onclick="Nuevo">
+                Nuevo programa con acreditaciones
+            </button>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(mensaje))
+    {
+        <div class="alert alert-info mt-3">@mensaje</div>
+    }
+
+    <table class="table table-bordered mt-3">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Programa</th>
+                <th>Tipo</th>
+                <th>Nivel</th>
+                <th>Ciudad</th>
+                <th>Acreditaciones</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var item in programas)
+            {
+                <tr>
+                    <td>@item.Id</td>
+                    <td>@item.Nombre</td>
+                    <td>@item.Tipo</td>
+                    <td>@item.Nivel</td>
+                    <td>@item.Ciudad</td>
+                    <td>
+                        <span class="count-pill">@item.CantAcreditaciones</span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-info me-1" @onclick="() => Ver(item.Id)">
+                            Ver
+                        </button>
+
+                        @if (rol == "Administrador" || rol == "Docente")
+                        {
+                            <button class="btn btn-sm btn-warning me-1" @onclick="() => Editar(item.Id)">
+                                Editar
+                            </button>
+                        }
+
+                        @if (rol == "Administrador")
+                        {
+                            <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(item.Id)">
+                                Eliminar
+                            </button>
+                        }
+
+                        @if (rol == "Consultor")
+                        {
+                            <span class="text-muted ms-2">Solo lectura</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else if (vista == "ver")
+{
+    <button class="btn btn-secondary mb-3" @onclick="VolverListado">
+        Volver al listado
+    </button>
+
+    <div class="programa-card">
+        <span>Programa maestro</span>
+        <h3>@modelo.Nombre</h3>
+
+        <div class="programa-info">
+            <div><strong>ID:</strong> @modelo.Id</div>
+            <div><strong>Tipo:</strong> @modelo.Tipo</div>
+            <div><strong>Nivel:</strong> @modelo.Nivel</div>
+            <div><strong>Ciudad:</strong> @modelo.Ciudad</div>
+            <div><strong>Facultad:</strong> @modelo.Facultad</div>
+            <div><strong>Cohortes:</strong> @modelo.NumCohortes</div>
+            <div><strong>Graduados:</strong> @modelo.CantGraduados</div>
+            <div><strong>Fecha creación:</strong> @MostrarFecha(modelo.FechaCreacion)</div>
+            <div><strong>Fecha cierre:</strong> @MostrarFecha(modelo.FechaCierre)</div>
+            <div><strong>Fecha actualización:</strong> @MostrarFecha(modelo.FechaActualizacion)</div>
+        </div>
+    </div>
+
+    <h4 class="mt-4">Detalle: acreditaciones</h4>
+
+    @if (modelo.Acreditaciones.Any())
+    {
+        <table class="table table-bordered mt-3">
+            <thead>
+                <tr>
+                    <th>Resolución</th>
+                    <th>Tipo</th>
+                    <th>Calificación</th>
+                    <th>Fecha inicio</th>
+                    <th>Fecha fin</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var acr in modelo.Acreditaciones)
+                {
+                    <tr>
+                        <td>@acr.Resolucion</td>
+                        <td>@acr.Tipo</td>
+                        <td>@acr.Calificacion</td>
+                        <td>@MostrarFecha(acr.FechaInicio)</td>
+                        <td>@MostrarFecha(acr.FechaFin)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-warning mt-3">
+            Este programa no tiene acreditaciones registradas.
+        </div>
+    }
+
+    <div class="mt-3">
+        @if (rol == "Administrador" || rol == "Docente")
+        {
+            <button class="btn btn-warning me-2" @onclick="() => Editar(modelo.Id)">
+                Editar
+            </button>
+        }
+
+        @if (rol == "Administrador")
+        {
+            <button class="btn btn-danger" @onclick="() => Eliminar(modelo.Id)">
+                Eliminar
+            </button>
+        }
+    </div>
+}
+else if (vista == "formulario")
+{
+    <button class="btn btn-secondary mb-3" @onclick="VolverListado">
+        Volver al listado
+    </button>
+
+    <div class="card-form">
+        <h4>@(editando ? "Editar programa con acreditaciones" : "Nuevo programa con acreditaciones")</h4>
+
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label>ID Programa</label>
+                <input type="number" class="form-control" @bind="modelo.Id" disabled="@editando" />
+            </div>
+
+            <div class="col-md-5 mb-3">
+                <label>Nombre</label>
+                <input class="form-control" @bind="modelo.Nombre" />
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label>Tipo</label>
+                <input class="form-control" @bind="modelo.Tipo" />
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label>Nivel</label>
+                <input class="form-control" @bind="modelo.Nivel" />
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label>Ciudad</label>
+                <input class="form-control" @bind="modelo.Ciudad" />
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label>Facultad ID</label>
+                <input type="number" class="form-control" @bind="modelo.Facultad" />
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label>Fecha creación</label>
+                <input type="date"
+                       class="form-control"
+                       value="@ValorFecha(modelo.FechaCreacion)"
+                       @onchange="e => modelo.FechaCreacion = e.Value?.ToString()" />
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label>Fecha cierre</label>
+                <input type="date"
+                       class="form-control"
+                       value="@ValorFecha(modelo.FechaCierre)"
+                       @onchange="e => modelo.FechaCierre = e.Value?.ToString()" />
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label>Fecha actualización</label>
+                <input type="date"
+                       class="form-control"
+                       value="@ValorFecha(modelo.FechaActualizacion)"
+                       @onchange="e => modelo.FechaActualizacion = e.Value?.ToString()" />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label>Número cohortes</label>
+                <input type="number" class="form-control" @bind="modelo.NumCohortes" />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label>Cantidad graduados</label>
+                <input type="number" class="form-control" @bind="modelo.CantGraduados" />
+            </div>
+        </div>
+    </div>
+
+    <div class="card-form mt-4">
+        <div class="detail-title">
+            <div>
+                <h4>Acreditaciones del programa</h4>
+                <p>Agrega una o varias acreditaciones asociadas al programa maestro.</p>
+            </div>
+
+            <button class="btn btn-outline-primary" @onclick="AgregarAcreditacion">
+                + Agregar acreditación
+            </button>
+        </div>
+
+        @for (int i = 0; i < modelo.Acreditaciones.Count; i++)
+        {
+            var index = i;
+
+            <div class="detail-row">
+                <div class="row">
+                    <div class="col-md-2 mb-3">
+                        <label>Resolución</label>
+                        <input type="number" class="form-control" @bind="modelo.Acreditaciones[index].Resolucion" />
+                    </div>
+
+                    <div class="col-md-2 mb-3">
+                        <label>Tipo</label>
+                        <input class="form-control" @bind="modelo.Acreditaciones[index].Tipo" />
+                    </div>
+
+                    <div class="col-md-2 mb-3">
+                        <label>Calificación</label>
+                        <input class="form-control" @bind="modelo.Acreditaciones[index].Calificacion" />
+                    </div>
+
+                    <div class="col-md-2 mb-3">
+                        <label>Fecha inicio</label>
+                        <input type="date"
+                               class="form-control"
+                               value="@ValorFecha(modelo.Acreditaciones[index].FechaInicio)"
+                               @onchange="e => modelo.Acreditaciones[index].FechaInicio = e.Value?.ToString()" />
+                    </div>
+
+                    <div class="col-md-2 mb-3">
+                        <label>Fecha fin</label>
+                        <input type="date"
+                               class="form-control"
+                               value="@ValorFecha(modelo.Acreditaciones[index].FechaFin)"
+                               @onchange="e => modelo.Acreditaciones[index].FechaFin = e.Value?.ToString()" />
+                    </div>
+
+                    <div class="col-md-2 mb-3 d-flex align-items-end">
+                        <button class="btn btn-danger w-100" @onclick="() => QuitarAcreditacion(index)">
+                            Quitar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(mensaje))
+    {
+        <div class="alert alert-info mt-3">@mensaje</div>
+    }
+
+    <button class="btn btn-success mt-3 me-2" @onclick="Guardar">
+        Guardar maestro-detalle
+    </button>
+
+    <button class="btn btn-secondary mt-3" @onclick="VolverListado">
+        Cancelar
+    </button>
+}
+
+@code {
+    private string rol = "";
+    private string vista = "listar";
+    private string mensaje = "";
+    private bool editando = false;
+
+    private List<ProgramaResumenDto> programas = new();
+    private ProgramaMaestroDetalleDto modelo = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarListado();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol") ?? "";
+            StateHasChanged();
+        }
+    }
+
+    private async Task CargarListado()
+    {
+        try
+        {
+            programas = await Http.GetFromJsonAsync<List<ProgramaResumenDto>>(
+                "api/MaestroDetalle/programa-acreditaciones"
+            ) ?? new();
+
+            mensaje = "";
+        }
+        catch (Exception ex)
+        {
+            mensaje = "Error al cargar listado: " + ex.Message;
+        }
+    }
+
+    private void Nuevo()
+    {
+        if (rol == "Consultor")
+        {
+            mensaje = "El Consultor solo puede visualizar información.";
+            return;
+        }
+
+        modelo = new ProgramaMaestroDetalleDto
+        {
+            FechaCreacion = DateTime.Today.ToString("yyyy-MM-dd"),
+            FechaCierre = DateTime.Today.ToString("yyyy-MM-dd"),
+            FechaActualizacion = DateTime.Today.ToString("yyyy-MM-dd"),
+            Acreditaciones = new List<AcreditacionDetalleDto>
+            {
+                new AcreditacionDetalleDto
+                {
+                    FechaInicio = DateTime.Today.ToString("yyyy-MM-dd"),
+                    FechaFin = DateTime.Today.ToString("yyyy-MM-dd")
+                }
+            }
+        };
+
+        editando = false;
+        mensaje = "";
+        vista = "formulario";
+    }
+
+    private async Task Ver(int id)
+    {
+        try
+        {
+            modelo = await Http.GetFromJsonAsync<ProgramaMaestroDetalleDto>(
+                $"api/MaestroDetalle/programa-acreditaciones/{id}"
+            ) ?? new();
+
+            modelo.Acreditaciones ??= new();
+
+            mensaje = "";
+            vista = "ver";
+        }
+        catch (Exception ex)
+        {
+            mensaje = "Error al consultar: " + ex.Message;
+        }
+    }
+
+    private async Task Editar(int id)
+    {
+        if (rol == "Consultor")
+        {
+            mensaje = "El Consultor no puede editar información.";
+            return;
+        }
+
+        try
+        {
+            modelo = await Http.GetFromJsonAsync<ProgramaMaestroDetalleDto>(
+                $"api/MaestroDetalle/programa-acreditaciones/{id}"
+            ) ?? new();
+
+            modelo.Acreditaciones ??= new();
+
+            if (!modelo.Acreditaciones.Any())
+            {
+                modelo.Acreditaciones.Add(new AcreditacionDetalleDto
+                {
+                    FechaInicio = DateTime.Today.ToString("yyyy-MM-dd"),
+                    FechaFin = DateTime.Today.ToString("yyyy-MM-dd")
+                });
+            }
+
+            editando = true;
+            mensaje = "";
+            vista = "formulario";
+        }
+        catch (Exception ex)
+        {
+            mensaje = "Error al cargar para editar: " + ex.Message;
+        }
+    }
+
+    private async Task Guardar()
+    {
+        if (rol == "Consultor")
+        {
+            mensaje = "El Consultor no puede guardar información.";
+            return;
+        }
+
+        if (modelo.Id <= 0 ||
+            string.IsNullOrWhiteSpace(modelo.Nombre) ||
+            string.IsNullOrWhiteSpace(modelo.Tipo) ||
+            string.IsNullOrWhiteSpace(modelo.Nivel) ||
+            string.IsNullOrWhiteSpace(modelo.Ciudad) ||
+            modelo.Facultad == null)
+        {
+            mensaje = "Completa los datos principales del programa.";
+            return;
+        }
+
+        modelo.Acreditaciones ??= new();
+
+        modelo.Acreditaciones = modelo.Acreditaciones
+            .Where(a => a.Resolucion != null && a.Resolucion > 0)
+            .ToList();
+
+        try
+        {
+            HttpResponseMessage respuesta;
+
+            if (editando)
+            {
+                respuesta = await Http.PutAsJsonAsync(
+                    $"api/MaestroDetalle/programa-acreditaciones/{modelo.Id}",
+                    modelo
+                );
+            }
+            else
+            {
+                respuesta = await Http.PostAsJsonAsync(
+                    "api/MaestroDetalle/programa-acreditaciones",
+                    modelo
+                );
+            }
+
+            var contenido = await respuesta.Content.ReadAsStringAsync();
+
+            if (respuesta.IsSuccessStatusCode)
+            {
+                mensaje = "Operación realizada correctamente.";
+                await CargarListado();
+                vista = "listar";
+            }
+            else
+            {
+                mensaje = "Error al guardar: " + contenido;
+            }
+        }
+        catch (Exception ex)
+        {
+            mensaje = "Error al guardar: " + ex.Message;
+        }
+    }
+
+    private async Task Eliminar(int id)
+    {
+        if (rol != "Administrador")
+        {
+            mensaje = "Solo el Administrador puede eliminar registros.";
+            return;
+        }
+
+        var confirmar = await JS.InvokeAsync<bool>(
+            "confirm",
+            $"¿Seguro que deseas eliminar el programa {id} y sus acreditaciones?"
+        );
+
+        if (!confirmar)
+        {
+            return;
+        }
+
+        try
+        {
+            var respuesta = await Http.DeleteAsync(
+                $"api/MaestroDetalle/programa-acreditaciones/{id}"
+            );
+
+            var contenido = await respuesta.Content.ReadAsStringAsync();
+
+            if (respuesta.IsSuccessStatusCode)
+            {
+                mensaje = "Registro eliminado correctamente.";
+                await CargarListado();
+                vista = "listar";
+            }
+            else
+            {
+                mensaje = "Error al eliminar: " + contenido;
+            }
+        }
+        catch (Exception ex)
+        {
+            mensaje = "Error al eliminar: " + ex.Message;
+        }
+    }
+
+    private void AgregarAcreditacion()
+    {
+        modelo.Acreditaciones ??= new();
+
+        modelo.Acreditaciones.Add(new AcreditacionDetalleDto
+        {
+            FechaInicio = DateTime.Today.ToString("yyyy-MM-dd"),
+            FechaFin = DateTime.Today.ToString("yyyy-MM-dd")
+        });
+    }
+
+    private void QuitarAcreditacion(int index)
+    {
+        modelo.Acreditaciones ??= new();
+
+        if (index >= 0 && index < modelo.Acreditaciones.Count)
+        {
+            modelo.Acreditaciones.RemoveAt(index);
+        }
+    }
+
+    private async Task VolverListado()
+    {
+        vista = "listar";
+        mensaje = "";
+        await CargarListado();
+    }
+
+    private static string ValorFecha(string? fecha)
+    {
+        if (string.IsNullOrWhiteSpace(fecha))
+        {
+            return "";
+        }
+
+        if (DateTime.TryParse(fecha, out var fechaConvertida))
+        {
+            return fechaConvertida.ToString("yyyy-MM-dd");
+        }
+
+        if (fecha.Length >= 10)
+        {
+            return fecha.Substring(0, 10);
+        }
+
+        return "";
+    }
+
+    private static string MostrarFecha(string? fecha)
+    {
+        if (string.IsNullOrWhiteSpace(fecha))
+        {
+            return "";
+        }
+
+        if (DateTime.TryParse(fecha, out var fechaConvertida))
+        {
+            return fechaConvertida.ToString("yyyy-MM-dd");
+        }
+
+        if (fecha.Length >= 10)
+        {
+            return fecha.Substring(0, 10);
+        }
+
+        return fecha;
+    }
+
+    public class ProgramaResumenDto
+    {
+        public int Id { get; set; }
+
+        public string Nombre { get; set; } = "";
+
+        public string Tipo { get; set; } = "";
+
+        public string Nivel { get; set; } = "";
+
+        public string Ciudad { get; set; } = "";
+
+        public int? Facultad { get; set; }
+
+        public int CantAcreditaciones { get; set; }
+    }
+
+    public class ProgramaMaestroDetalleDto
+    {
+        public int Id { get; set; }
+
+        public string Nombre { get; set; } = "";
+
+        public string Tipo { get; set; } = "";
+
+        public string Nivel { get; set; } = "";
+
+        public string? FechaCreacion { get; set; }
+
+        public string? FechaCierre { get; set; }
+
+        public int? NumCohortes { get; set; }
+
+        public int? CantGraduados { get; set; }
+
+        public string? FechaActualizacion { get; set; }
+
+        public string Ciudad { get; set; } = "";
+
+        public int? Facultad { get; set; }
+
+        public List<AcreditacionDetalleDto> Acreditaciones { get; set; } = new();
+    }
+
+    public class AcreditacionDetalleDto
+    {
+        public int? Resolucion { get; set; }
+
+        public string Tipo { get; set; } = "";
+
+        public string Calificacion { get; set; } = "";
+
+        public string? FechaInicio { get; set; }
+
+        public string? FechaFin { get; set; }
+    }
+}

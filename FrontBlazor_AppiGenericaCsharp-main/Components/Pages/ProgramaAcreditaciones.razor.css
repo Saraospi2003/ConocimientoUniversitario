@@ -1,0 +1,149 @@
+.crud-header {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: white;
+    padding: 2rem;
+    border-radius: 24px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 18px 40px rgba(79, 70, 229, 0.22);
+}
+
+.crud-header span {
+    background: rgba(255, 255, 255, 0.18);
+    padding: 0.4rem 0.9rem;
+    border-radius: 999px;
+    font-weight: 600;
+}
+
+.crud-header h2 {
+    margin-top: 1rem;
+    font-weight: 800;
+}
+
+.crud-header p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.role-pill {
+    background: white;
+    color: #4f46e5;
+    padding: 0.7rem 1rem;
+    border-radius: 999px;
+}
+
+.toolbar-card,
+.card-form,
+.programa-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 22px;
+    box-shadow: 0 12px 30px rgba(17, 24, 39, 0.08);
+    border: 1px solid #eef2ff;
+}
+
+.toolbar-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.toolbar-card h4,
+.card-form h4 {
+    font-weight: 800;
+    margin: 0;
+}
+
+.toolbar-card p,
+.detail-title p {
+    color: #6b7280;
+    margin: 0.3rem 0 0;
+}
+
+.programa-card {
+    background: linear-gradient(135deg, #f5f3ff, #eef2ff);
+    border-left: 8px solid #7c3aed;
+}
+
+.programa-card span {
+    color: #4f46e5;
+    font-weight: 700;
+}
+
+.programa-card h3 {
+    margin-top: 0.5rem;
+    font-weight: 800;
+}
+
+.programa-info {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.programa-info div {
+    background: white;
+    padding: 1rem;
+    border-radius: 16px;
+}
+
+.detail-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.detail-row {
+    background: #f9fafb;
+    border: 1px solid #eef2ff;
+    padding: 1rem;
+    border-radius: 18px;
+    margin-bottom: 1rem;
+}
+
+.count-pill {
+    background: #ede9fe;
+    color: #5b21b6;
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
+    font-weight: 800;
+}
+
+.form-control {
+    border-radius: 14px;
+    padding: 0.75rem;
+}
+
+.btn {
+    border-radius: 14px;
+    font-weight: 700;
+}
+
+.table {
+    background: white;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgba(17, 24, 39, 0.08);
+}
+
+.table thead {
+    background: #f5f3ff;
+}
+
+@media (max-width: 900px) {
+    .toolbar-card,
+    .detail-title,
+    .crud-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .programa-info {
+        grid-template-columns: 1fr;
+    }
+}
